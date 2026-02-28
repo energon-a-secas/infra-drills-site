@@ -1,0 +1,105 @@
+topic: RBAC and Permissions
+section: kubernetes
+difficulty: intermediate
+related_drills: [k8s-12-rbac-forbidden]
+questions:
+  - id: rbac-01
+    type: diagnose
+    prompt: |
+      A pod using ServiceAccount my-sa tries to list pods in the default
+      namespace but receives: "Error: pods is forbidden: User
+      system:serviceaccount:default:my-sa cannot list resource pods". A Role
+      called pod-reader exists with the correct permissions. What is missing?
+    options:
+      a: The Role needs additional verbs like get and watch
+      b: A RoleBinding linking the pod-reader Role to the my-sa ServiceAccount
+      c: The ServiceAccount must be recreated with special annotations
+      d: A ClusterRole is required because Roles cannot grant pod list access
+    answer: b
+    explanation: >
+      A Role defines permissions but does not grant them to anyone. You need a
+      RoleBinding to bind the Role to a subject such as a ServiceAccount, user,
+      or group. Without the binding, the ServiceAccount has no permissions
+      beyond the defaults.
+
+  - id: rbac-02
+    type: complete
+    prompt: |
+      Complete the command to create a RoleBinding that binds the pod-reader
+      Role to a ServiceAccount:
+      kubectl create rolebinding my-binding --role=pod-reader --serviceaccount=___
+    answer: "default:my-sa"
+    accept: ["default:my-sa", "NAMESPACE:SA-NAME"]
+    explanation: >
+      The --serviceaccount flag uses the format namespace:name. For a
+      ServiceAccount called my-sa in the default namespace, you write
+      default:my-sa. This binds the pod-reader Role to that specific
+      ServiceAccount within the RoleBinding namespace.
+
+  - id: rbac-03
+    type: match
+    prompt: |
+      Match each RBAC resource with its scope and purpose.
+    left: ["Role", "ClusterRole", "RoleBinding", "ClusterRoleBinding"]
+    right: ["Namespaced permissions definition", "Cluster-wide permissions definition", "Binds role to subject in a namespace", "Binds cluster role to subject globally"]
+    pairs: [[0,0], [1,1], [2,2], [3,3]]
+    explanation: >
+      Role and RoleBinding are namespaced resources. A Role defines permissions
+      within a namespace and a RoleBinding grants those permissions to subjects
+      in that namespace. ClusterRole and ClusterRoleBinding are cluster-scoped.
+      A ClusterRole defines permissions across all namespaces and a
+      ClusterRoleBinding grants them globally.
+
+  - id: rbac-04
+    type: diagnose
+    prompt: |
+      A ClusterRole grants list permissions for pods. A developer can list
+      pods in the default namespace but gets forbidden in kube-system. You
+      used a RoleBinding (not ClusterRoleBinding) to bind the ClusterRole.
+      What is the issue?
+    options:
+      a: ClusterRoles cannot be used with RoleBindings
+      b: RoleBinding only grants access in its own namespace; use ClusterRoleBinding for all namespaces
+      c: The kube-system namespace has special protections that prevent all access
+      d: The developer needs a separate ClusterRole for system namespaces
+    answer: b
+    explanation: >
+      A RoleBinding can reference a ClusterRole, but it only grants the
+      permissions within the namespace where the RoleBinding exists. To grant
+      access across all namespaces, you must use a ClusterRoleBinding. This
+      is a common mistake when setting up RBAC permissions.
+
+  - id: rbac-05
+    type: complete
+    prompt: |
+      Complete the missing verb to allow full read access to pods:
+      verbs: ["get", "list", "___"]
+    answer: watch
+    accept: [watch]
+    explanation: >
+      The three standard read verbs in Kubernetes RBAC are get (single
+      resource), list (collection), and watch (stream changes). Together they
+      provide complete read access. Without watch, controllers and informers
+      cannot receive real-time updates about resource changes.
+
+  - id: rbac-06
+    type: diagnose
+    prompt: |
+      A pod can successfully list pods (core API group) but gets forbidden
+      when trying to list deployments. The Role has this rule:
+      apiGroups: [""]
+      resources: ["pods", "deployments"]
+      verbs: ["get", "list", "watch"]
+      What is wrong?
+    options:
+      a: The verbs are incorrect for deployments
+      b: Deployments require a ClusterRole, not a Role
+      c: Deployments are in the "apps" apiGroup, not the core "" apiGroup
+      d: The resources field cannot contain both pods and deployments
+    answer: c
+    explanation: >
+      Pods are in the core API group (represented by ""), but deployments are
+      in the "apps" API group. A single rule with apiGroups [""] only covers
+      core resources. You need a separate rule with apiGroups ["apps"] for
+      deployments, or add "apps" as an additional entry if structuring rules
+      to cover multiple API groups.

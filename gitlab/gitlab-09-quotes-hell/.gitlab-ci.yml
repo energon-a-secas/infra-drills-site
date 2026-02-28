@@ -1,0 +1,45 @@
+image: alpine:latest
+
+variables:
+  APP_VERSION: 2.1.0
+  DEPLOY_PATH: /opt/app/$APP_VERSION/bin
+  CONNECTION_STRING: host=db:5432 user=admin password=s3cr3t#2024
+  FEATURE_FLAGS: {enable_cache: true, max_retries: 3}
+  GREETING: Hello $USER, welcome!
+  TAG_PATTERN: release-v*
+
+stages:
+  - validate
+  - build
+  - deploy
+
+validate-config:
+  stage: validate
+  script:
+    - echo "Validating version $APP_VERSION"
+    - echo "Deploy target: $DEPLOY_PATH"
+    - echo "Connection: $CONNECTION_STRING"
+    - echo "Flags: $FEATURE_FLAGS"
+
+build-app:
+  stage: build
+  script:
+    - echo "Building version $APP_VERSION"
+    - export BUILD_TAG=$APP_VERSION-$(date +%Y%m%d)
+    - echo "Build tag is: $BUILD_TAG"
+    - echo "Setting config value: retry_count=3 # max allowed"
+    - RESULT=$(echo $APP_VERSION | cut -d. -f1)
+    - echo "Major version: $RESULT"
+
+deploy-app:
+  stage: deploy
+  script:
+    - echo "Deploying to $DEPLOY_PATH"
+    - echo 'No variables expanded here: $APP_VERSION stays literal'
+    - echo "Config: password=s3cr3t#2024 host=localhost"
+    - |
+      if [ "$APP_VERSION" != "" ]; then
+        echo "Version is set: $APP_VERSION"
+      fi
+    - echo "JSON payload: {"app": "$APP_VERSION", "env": "prod"}"
+    - 'echo "Special chars: colons: here and {braces} too"'

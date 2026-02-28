@@ -1,0 +1,162 @@
+topic: Pod Troubleshooting
+section: kubernetes
+difficulty: beginner
+related_drills: [k8s-01-deployment-not-starting, k8s-02-resource-limits-oom]
+questions:
+  - id: pod-ts-01
+    type: diagnose
+    prompt: |
+      A pod keeps restarting with status OOMKilled. The container has a memory
+      limit of 64Mi, but the application typically requires around 256Mi to run.
+      What should you do?
+    options:
+      a: Delete the pod and let the controller recreate it
+      b: Increase the container memory limit to at least 256Mi
+      c: Add a liveness probe to restart the container faster
+      d: Change the restart policy to Never
+    answer: b
+    explanation: >
+      OOMKilled means the container exceeded its memory limit and was killed by
+      the kernel OOM killer. The fix is to increase the memory limit (and
+      request) so the container has enough memory to operate. Setting it to at
+      least 256Mi matches what the application needs.
+
+  - id: pod-ts-02
+    type: complete
+    prompt: |
+      Complete the command to view the logs of a pod:
+      kubectl ___ my-pod
+    answer: logs
+    accept: [logs]
+    explanation: >
+      kubectl logs is the command to retrieve container logs from a pod. You can
+      add -f to follow the log stream or -p to see logs from a previous
+      (crashed) container instance.
+
+  - id: pod-ts-03
+    type: match
+    prompt: |
+      Match each container exit code with its meaning.
+    left: ["0", "1", "137", "143"]
+    right: ["Success", "General error", "SIGKILL (OOM)", "SIGTERM (graceful shutdown)"]
+    pairs: [[0,0], [1,1], [2,2], [3,3]]
+    explanation: >
+      Exit code 0 means the process completed successfully. Exit code 1 is a
+      general application error. Exit code 137 (128+9) means the process
+      received SIGKILL, typically from the OOM killer. Exit code 143 (128+15)
+      means the process received SIGTERM, the graceful shutdown signal sent
+      during pod termination.
+
+  - id: pod-ts-04
+    type: diagnose
+    prompt: |
+      A pod is in CrashLoopBackOff. The logs show:
+      "Error: connect ECONNREFUSED 10.96.0.15:5432 - connection refused to
+      database". The database is supposed to be running in the same namespace.
+      What is the most likely cause?
+    options:
+      a: The pod needs more CPU resources
+      b: The database service is not running or has a wrong endpoint
+      c: The pod image is corrupted and needs to be rebuilt
+      d: The namespace has a NetworkPolicy blocking all traffic
+    answer: b
+    explanation: >
+      Connection refused means the target address is reachable but nothing is
+      listening on that port. The database pod or service is either not running,
+      not ready, or the connection string points to the wrong service endpoint.
+      Check that the database pod is running and the service selectors match.
+
+  - id: pod-ts-05
+    type: complete
+    prompt: |
+      Complete the command to get detailed information about a pod:
+      kubectl ___ pod my-pod
+    answer: describe
+    accept: [describe]
+    explanation: >
+      kubectl describe pod shows detailed information including events,
+      conditions, container statuses, volumes, and more. It is one of the most
+      useful commands for troubleshooting pod issues.
+
+  - id: pod-ts-06
+    type: diagnose
+    prompt: |
+      A pod is stuck in ImagePullBackOff. Running kubectl describe shows:
+      "Failed to pull image nginx:lates - manifest unknown". You notice the
+      image tag is set to "lates". What should you do?
+    options:
+      a: Delete the pod and recreate it with the same manifest
+      b: Switch to a private registry since Docker Hub is down
+      c: Fix the image tag typo from "lates" to "latest" or the correct tag
+      d: Add imagePullSecrets to the pod spec
+    answer: c
+    explanation: >
+      ImagePullBackOff occurs when Kubernetes cannot pull the container image.
+      In this case the image tag "lates" is a typo and should be "latest" or
+      whatever the correct tag is. The error message "manifest unknown"
+      confirms that the specified tag does not exist in the registry.
+
+  - id: pod-ts-07
+    type: diagnose
+    prompt: |
+      A pod is stuck in ContainerCreating for several minutes. Events show:
+      "persistentvolumeclaim my-data-pvc not found". The pod spec references a
+      volume claim named my-data-pvc. What should you do?
+    options:
+      a: Restart the kubelet on the node
+      b: Increase the pod resource requests
+      c: Create the missing PVC or fix the volume claim name in the pod spec
+      d: Delete the pod and let it be rescheduled to another node
+    answer: c
+    explanation: >
+      ContainerCreating with a PVC not found error means the pod cannot start
+      because the referenced PersistentVolumeClaim does not exist. You need to
+      either create the PVC with the name my-data-pvc or correct the volume
+      claim name in the pod specification to reference an existing PVC.
+
+  - id: pod-ts-08
+    type: complete
+    prompt: |
+      Complete the command to list cluster events:
+      kubectl get ___
+    answer: events
+    accept: [events, ev]
+    explanation: >
+      kubectl get events lists all events in the current namespace. Events
+      provide valuable troubleshooting information such as scheduling decisions,
+      image pull results, and container state changes. Use --sort-by=.metadata.creationTimestamp
+      to see them in chronological order.
+
+  - id: pod-ts-09
+    type: diagnose
+    prompt: |
+      A pod is Running but the service reports it as not ready. The application
+      starts and listens on port 8080, but the readiness probe is configured
+      to check port 80. What is the problem?
+    options:
+      a: The pod needs a liveness probe instead of a readiness probe
+      b: The service port configuration is wrong
+      c: The readiness probe port must be changed from 80 to 8080
+      d: The container needs to expose port 80 explicitly
+    answer: c
+    explanation: >
+      The readiness probe determines whether the pod should receive traffic. If
+      the probe checks port 80 but the application listens on 8080, the probe
+      will always fail and the pod will never be marked ready. Fix the
+      readiness probe to check port 8080 where the application is actually
+      listening.
+
+  - id: pod-ts-10
+    type: match
+    prompt: |
+      Match each pod status with its meaning.
+    left: ["Pending", "Running", "CrashLoopBackOff", "ImagePullBackOff"]
+    right: ["Waiting for scheduling or volumes", "All containers started successfully", "Container crashes repeatedly after restarts", "Cannot pull the container image"]
+    pairs: [[0,0], [1,1], [2,2], [3,3]]
+    explanation: >
+      Pending means the pod has been accepted but is waiting for scheduling or
+      volume binding. Running means all containers have been created and at
+      least one is running. CrashLoopBackOff means a container keeps crashing
+      and Kubernetes is applying exponential backoff before restarting.
+      ImagePullBackOff means Kubernetes cannot pull the specified container
+      image from the registry.

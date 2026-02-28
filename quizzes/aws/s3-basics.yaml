@@ -1,0 +1,139 @@
+topic: S3 Basics
+section: aws
+difficulty: beginner
+related_drills: [s3-01-bucket-does-not-appear]
+questions:
+  - id: s3-basics-1
+    type: diagnose
+    prompt: |
+      You run the following command and get "Access Denied":
+
+        awslocal s3api put-object --bucket my-bucket --key file.txt --body file.txt
+
+      The bucket policy requires server-side encryption for all uploads.
+      What flag is missing from the command?
+    options:
+      a: --acl public-read
+      b: --server-side-encryption AES256
+      c: --content-type application/octet-stream
+      d: --storage-class STANDARD
+    answer: b
+    explanation: >
+      When a bucket policy includes a condition requiring server-side encryption
+      (s3:x-amz-server-side-encryption), every put-object request must include
+      the --server-side-encryption flag. Without it, S3 rejects the upload with
+      a 403 Access Denied error. The correct flag is --server-side-encryption AES256.
+
+  - id: s3-basics-2
+    type: complete
+    prompt: |
+      Complete the command to list all S3 buckets:
+
+        awslocal s3api ___
+    answer: list-buckets
+    accept: [list-buckets]
+    explanation: >
+      The s3api list-buckets command returns a list of all buckets owned by the
+      authenticated sender of the request. This is one of the most basic S3 API
+      operations and requires s3:ListAllMyBuckets permission.
+
+  - id: s3-basics-3
+    type: match
+    prompt: |
+      Match each S3 encryption type to how its encryption key is managed.
+    left: ["SSE-S3", "SSE-KMS", "SSE-C", "Client-side"]
+    right: ["AWS manages key automatically", "AWS KMS manages key with audit trail", "Customer provides key in every request", "Encryption happens before upload"]
+    pairs: [[0,0], [1,1], [2,2], [3,3]]
+    explanation: >
+      SSE-S3 uses an AES-256 key fully managed by AWS. SSE-KMS uses AWS Key
+      Management Service, giving you an audit trail via CloudTrail. SSE-C requires
+      you to send the encryption key with each request. Client-side encryption
+      means the data is encrypted before it ever reaches S3.
+
+  - id: s3-basics-4
+    type: diagnose
+    prompt: |
+      You created a bucket in us-west-2 but when you run:
+
+        aws s3 ls
+
+      from a terminal configured for us-east-1, the bucket does not appear.
+      What is the most likely cause?
+    options:
+      a: S3 buckets are region-specific and never appear cross-region
+      b: The IAM user does not have s3:ListAllMyBuckets permission
+      c: Eventual consistency delay — the bucket was just created
+      d: You need to specify --region us-west-2 in the list command
+    answer: c
+    explanation: >
+      S3 bucket names are globally unique and s3 ls should eventually show all
+      buckets regardless of region. However, newly created buckets may experience
+      a brief eventual consistency delay before they appear in list operations.
+      If the bucket was just created, waiting a moment and retrying usually resolves it.
+
+  - id: s3-basics-5
+    type: complete
+    prompt: |
+      Complete the command to enable versioning on a bucket:
+
+        awslocal s3api put-bucket-versioning --bucket my-bucket --versioning-configuration ___
+    answer: Status=Enabled
+    accept: [Status=Enabled]
+    explanation: >
+      The --versioning-configuration parameter takes a shorthand syntax of
+      Status=Enabled to turn on versioning. Once enabled, S3 keeps all versions
+      of an object including all writes and even deletes. Versioning can be
+      suspended but never fully disabled once enabled.
+
+  - id: s3-basics-6
+    type: diagnose
+    prompt: |
+      You generated a pre-signed URL for an S3 object and shared it with a
+      colleague. They get a 403 Forbidden error when clicking the link.
+      You test it yourself and also get 403. The object exists and your IAM
+      user has full S3 access. The URL was generated 2 days ago.
+      What is the most likely cause?
+    options:
+      a: Pre-signed URLs can only be used by the account that generated them
+      b: The pre-signed URL has expired
+      c: The object ACL blocks public access
+      d: The bucket has MFA Delete enabled
+    answer: b
+    explanation: >
+      Pre-signed URLs have an expiration time (default is often 1 hour for STS
+      credentials, up to 7 days for IAM user credentials). After expiration, the
+      URL returns 403 Forbidden. The fix is to generate a new pre-signed URL with
+      a longer --expires-in value appropriate for your use case.
+
+  - id: s3-basics-7
+    type: complete
+    prompt: |
+      Complete the command to copy a local file to an S3 bucket:
+
+        awslocal s3 cp ./file.txt ___
+    answer: s3://bucket-name/file.txt
+    accept: [s3://bucket-name/file.txt, "s3://my-bucket/file.txt"]
+    explanation: >
+      The s3 cp command copies files between local filesystem and S3. The
+      destination must use the s3:// URI scheme followed by the bucket name and
+      object key path. For example, s3://my-bucket/file.txt uploads the file
+      with the key file.txt in my-bucket.
+
+  - id: s3-basics-8
+    type: diagnose
+    prompt: |
+      You deleted several objects from a bucket, but when you list the bucket
+      contents they still appear. Running get-object on them returns a
+      404 error though. What feature is causing this behavior?
+    options:
+      a: S3 Replication is restoring the objects
+      b: Versioning is enabled — delete creates markers, not actual deletes
+      c: S3 lifecycle rules are preventing deletion
+      d: The bucket has Object Lock enabled
+    answer: b
+    explanation: >
+      When versioning is enabled, a DELETE operation does not permanently remove
+      an object. Instead, S3 inserts a delete marker which becomes the current
+      version. The object appears in listings that include versions but a
+      standard GET returns 404. To permanently delete, you must delete the
+      specific version ID or remove all versions including delete markers.

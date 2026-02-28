@@ -1,0 +1,147 @@
+topic: GitLab CI/CD Pipeline Basics
+section: gitlab
+difficulty: beginner
+related_drills: [gitlab-00-tutorial, gitlab-10-dependency-failure]
+questions:
+  - id: pipeline-basics-1
+    type: diagnose
+    prompt: |
+      A developer defines a .gitlab-ci.yml with two jobs. The test job runs before
+      the build job finishes, causing test failures because the compiled binary is
+      not yet available. The file does not include a stages definition. What is
+      the problem and how should it be fixed?
+    options:
+      a: Add retry: 3 to the test job so it waits for the binary
+      b: Define a stages list in the correct order so build runs before test
+      c: Add sleep 60 to the test job script
+      d: Set the test job to manual trigger
+    answer: b
+    explanation: >
+      Without an explicit stages definition, GitLab uses the default stage order.
+      You must define a stages list with build before test to ensure proper
+      execution order. Each job is assigned to a stage, and stages run sequentially
+      in the order they are listed.
+
+  - id: pipeline-basics-2
+    type: complete
+    prompt: |
+      Complete the stages definition so the pipeline runs build, then test, then deploy:
+
+      stages:
+        - build
+        - ___
+        - deploy
+    answer: test
+    accept: [test]
+    explanation: >
+      The stages keyword defines the order in which pipeline stages execute.
+      Jobs assigned to the build stage run first, then test, then deploy. Every
+      job must reference one of the defined stages or it defaults to the test
+      stage.
+
+  - id: pipeline-basics-3
+    type: match
+    prompt: |
+      Match each GitLab CI/CD keyword to its purpose.
+    left: ["stages", "needs", "rules", "variables"]
+    right: ["Defines pipeline phase order", "Creates DAG dependencies", "Conditional job execution", "Key-value pairs for jobs"]
+    pairs: [[0,0], [1,1], [2,2], [3,3]]
+    explanation: >
+      stages controls the sequential order of pipeline phases. needs creates a
+      directed acyclic graph (DAG) allowing jobs to start as soon as their
+      dependencies finish, regardless of stage order. rules provides conditional
+      logic for when a job should be included in the pipeline. variables defines
+      key-value pairs accessible within jobs.
+
+  - id: pipeline-basics-4
+    type: diagnose
+    prompt: |
+      A job is configured with the following rule but never runs in merge request
+      pipelines:
+
+      rules:
+        - if: $CI_PIPELINE_SOURCE == "push"
+
+      Merge requests are being opened and updated, but the job is always skipped.
+      What is the cause and the fix?
+    options:
+      a: The job needs allow_failure set to true
+      b: The variable CI_PIPELINE_SOURCE is not available in merge request pipelines
+      c: The condition only matches push events, not merge_request_event pipelines
+      d: The rules keyword is deprecated and only/except should be used instead
+    answer: c
+    explanation: >
+      When a merge request pipeline runs, CI_PIPELINE_SOURCE is set to
+      merge_request_event, not push. The rule only matches push pipelines, so
+      the job is skipped in merge request contexts. Add another rule for
+      merge_request_event or change the condition to cover both sources.
+
+  - id: pipeline-basics-5
+    type: complete
+    prompt: |
+      Complete the rule so this job runs only on the main branch:
+
+      rules:
+        - if: $CI_COMMIT_BRANCH == "___"
+    answer: main
+    accept: [main, master]
+    explanation: >
+      The CI_COMMIT_BRANCH variable contains the name of the branch being built.
+      Comparing it to main (or master, depending on your default branch name)
+      restricts the job to only run when commits are pushed to that branch.
+
+  - id: pipeline-basics-6
+    type: diagnose
+    prompt: |
+      A pipeline fails with the error "job 'deploy' config key 'needs' contains
+      unknown job 'build_binary'". The developer confirms that build_binary was
+      defined in the file but the stage it belongs to is commented out. What is
+      the problem and how should it be fixed?
+    options:
+      a: Rename the deploy job to match the build_binary naming convention
+      b: Add allow_failure to the deploy job
+      c: Uncomment the stage containing build_binary or remove the needs dependency
+      d: Move deploy to the same stage as build_binary
+    answer: c
+    explanation: >
+      When a stage is commented out, all jobs in that stage are removed from the
+      pipeline. The needs keyword requires the referenced job to exist in the
+      pipeline. Either uncomment the stage so build_binary is included, or remove
+      the needs reference to build_binary from the deploy job.
+
+  - id: pipeline-basics-7
+    type: complete
+    prompt: |
+      Complete the configuration to allow this job to fail without blocking the pipeline:
+
+      lint_check:
+        stage: test
+        allow_failure: ___
+        script:
+          - npm run lint
+    answer: "true"
+    accept: ["true"]
+    explanation: >
+      Setting allow_failure to true means the job can fail without causing the
+      entire pipeline to fail. The pipeline will show a warning icon for the job
+      but will continue to subsequent stages. This is useful for non-critical
+      checks like linting or code style validation.
+
+  - id: pipeline-basics-8
+    type: diagnose
+    prompt: |
+      A developer sets a variable DEPLOY_VERSION in the build job's script section
+      using export DEPLOY_VERSION=1.2.3. The next job in the deploy stage tries
+      to use $DEPLOY_VERSION but it is empty. What is the cause and the fix?
+    options:
+      a: Use export -g to make the variable global across jobs
+      b: Variables set via export in one job are not shared with other jobs; use dotenv artifacts to pass variables between jobs
+      c: Add the variable to the GitLab project settings instead
+      d: Use the cache keyword to share environment variables
+    answer: b
+    explanation: >
+      Each GitLab CI job runs in its own isolated shell environment. Variables
+      set with export only exist within that job's process. To pass variables
+      between jobs, write them to a dotenv file and declare it as an artifact
+      using artifacts:reports:dotenv. Subsequent jobs that depend on or download
+      artifacts from that job will have those variables available.

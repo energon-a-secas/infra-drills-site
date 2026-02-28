@@ -1,0 +1,110 @@
+topic: SQS Patterns
+section: aws
+difficulty: intermediate
+related_drills: [sqs-01-message-not-consumed]
+questions:
+  - id: sqs-patterns-1
+    type: diagnose
+    prompt: |
+      A Lambda function processes messages from an SQS queue. The function
+      completes successfully but the same messages keep reappearing in the
+      queue. The Lambda timeout is 120 seconds and the SQS visibility
+      timeout is 30 seconds. What is the problem?
+    options:
+      a: The Lambda function is not returning a success response
+      b: The visibility timeout is less than the Lambda timeout so messages become visible again during processing
+      c: The DLQ maxReceiveCount is set to 1
+      d: The SQS queue is a FIFO queue causing redelivery
+    answer: b
+    explanation: >
+      When the SQS visibility timeout (30s) is shorter than the Lambda function
+      timeout (120s), messages become visible in the queue again while Lambda is
+      still processing them. This causes duplicate processing. AWS recommends
+      setting the visibility timeout to at least 6 times the Lambda function
+      timeout. In this case, the visibility timeout should be at least 720 seconds.
+
+  - id: sqs-patterns-2
+    type: complete
+    prompt: |
+      Complete the redrive policy to send messages to a DLQ after 3 failed
+      processing attempts:
+
+        maxReceiveCount: ___
+    answer: 3
+    accept: ["3", "5"]
+    explanation: >
+      The maxReceiveCount in a redrive policy specifies how many times a message
+      can be received from the queue before it is moved to the dead-letter queue.
+      A value of 3 means after 3 failed processing attempts, the message is sent
+      to the DLQ for investigation. Common values are 3 to 5 depending on the
+      retry strategy and error tolerance.
+
+  - id: sqs-patterns-3
+    type: match
+    prompt: |
+      Match each SQS concept to its delivery/behavior characteristic.
+    left: ["Standard SQS", "FIFO SQS", "Dead-letter queue", "Delay queue"]
+    right: ["At-least-once delivery with best-effort ordering", "Exactly-once processing with strict ordering", "Storage for messages that failed processing", "Messages are invisible for a configured delay period"]
+    pairs: [[0,0], [1,1], [2,2], [3,3]]
+    explanation: >
+      Standard queues offer maximum throughput with at-least-once delivery but
+      may deliver duplicates. FIFO queues guarantee exactly-once processing and
+      maintain strict message ordering. Dead-letter queues store messages that
+      exceed the maxReceiveCount to prevent poison pill scenarios. Delay queues
+      postpone delivery of new messages for a configured number of seconds.
+
+  - id: sqs-patterns-4
+    type: diagnose
+    prompt: |
+      You created a FIFO SQS queue and your producer application is sending
+      messages. However, the SendMessage API call fails with:
+
+        MissingParameter: The request must contain the parameter MessageGroupId
+
+      What is the fix?
+    options:
+      a: Convert the queue to a standard queue
+      b: Add a MessageGroupId parameter to every SendMessage call
+      c: Set a default MessageGroupId on the queue configuration
+      d: Use SendMessageBatch instead of SendMessage
+    answer: b
+    explanation: >
+      FIFO queues require a MessageGroupId for every message. This ID determines
+      the message group — messages within the same group are processed in strict
+      FIFO order. Different groups can be processed in parallel. You must include
+      this parameter in every SendMessage or SendMessageBatch call. Additionally,
+      FIFO queues require a MessageDeduplicationId or content-based deduplication.
+
+  - id: sqs-patterns-5
+    type: complete
+    prompt: |
+      Complete the required name suffix for an SQS FIFO queue:
+
+        my-queue___
+    answer: .fifo
+    accept: [.fifo]
+    explanation: >
+      SQS FIFO queue names must end with the .fifo suffix. This is a hard
+      requirement — the API will reject queue creation if the name does not
+      end with .fifo when FifoQueue is set to true. For example, a valid
+      FIFO queue name would be orders-queue.fifo.
+
+  - id: sqs-patterns-6
+    type: diagnose
+    prompt: |
+      Your application consumes messages from a standard SQS queue. Occasionally
+      it processes the same message twice, causing duplicate records in the
+      database. Is this a bug in SQS?
+    options:
+      a: Yes — SQS should never deliver a message more than once
+      b: No — standard queues guarantee at-least-once delivery so duplicates are expected
+      c: Yes — this only happens if the visibility timeout is misconfigured
+      d: No — but only because you are using long polling
+    answer: b
+    explanation: >
+      Standard SQS queues provide at-least-once delivery, which means a message
+      can occasionally be delivered more than once. This is by design for
+      maximum throughput and availability. To prevent duplicates, either make
+      your consumer idempotent (recommended), use a FIFO queue for exactly-once
+      processing, or implement a deduplication mechanism in your application
+      using a unique message identifier.

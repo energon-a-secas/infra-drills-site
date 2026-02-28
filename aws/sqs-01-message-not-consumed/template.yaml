@@ -1,0 +1,114 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Setup for SQS event source mapping misconfiguration exercise'
+
+Resources:
+  MainQueue:
+    Type: 'AWS::SQS::Queue'
+    Properties:
+      QueueName: main-queue
+      VisibilityTimeout: 60
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt DeadLetterQueue.Arn
+        maxReceiveCount: 3
+
+  DeadLetterQueue:
+    Type: 'AWS::SQS::Queue'
+    Properties:
+      QueueName: main-queue-dlq
+      MessageRetentionPeriod: 1209600
+
+  SqsProcessorFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: sqs-processor
+      Handler: index.handler
+      Runtime: python3.12
+      Timeout: 30
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import logging
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def handler(event, context):
+              logger.info("Received SQS event: %s", json.dumps(event))
+              for record in event.get("Records", []):
+                  body = record.get("body", "")
+                  logger.info("Processing message: %s", body)
+                  message = json.loads(body)
+                  logger.info("Order ID: %s", message.get("order_id", "unknown"))
+              return {
+                  "statusCode": 200,
+                  "body": json.dumps({
+                      "message": "Messages processed successfully",
+                      "count": len(event.get("Records", []))
+                  })
+              }
+
+  # BUG: The event source mapping points to the DLQ instead of the main queue
+  SqsEventSourceMapping:
+    Type: 'AWS::Lambda::EventSourceMapping'
+    Properties:
+      EventSourceArn: !GetAtt DeadLetterQueue.Arn
+      FunctionName: !GetAtt SqsProcessorFunction.Arn
+      BatchSize: 10
+      Enabled: true
+
+  LambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: sqs-processor-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: SQSReadPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                Resource:
+                  - !GetAtt MainQueue.Arn
+                  - !GetAtt DeadLetterQueue.Arn
+
+Outputs:
+  MainQueueUrl:
+    Description: URL of the main SQS queue
+    Value: !Ref MainQueue
+
+  MainQueueArn:
+    Description: ARN of the main SQS queue
+    Value: !GetAtt MainQueue.Arn
+
+  DLQUrl:
+    Description: URL of the dead-letter queue
+    Value: !Ref DeadLetterQueue
+
+  DLQArn:
+    Description: ARN of the dead-letter queue
+    Value: !GetAtt DeadLetterQueue.Arn
+
+  FunctionName:
+    Description: Name of the SQS processor Lambda function
+    Value: !Ref SqsProcessorFunction
+
+  FunctionArn:
+    Description: ARN of the SQS processor Lambda function
+    Value: !GetAtt SqsProcessorFunction.Arn
+
+  RoleArn:
+    Description: ARN of the Lambda execution role
+    Value: !GetAtt LambdaExecutionRole.Arn

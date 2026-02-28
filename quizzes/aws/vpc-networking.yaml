@@ -1,0 +1,175 @@
+topic: VPC Networking
+section: aws
+difficulty: intermediate
+related_drills: [vpc-01-subnet-no-internet]
+questions:
+  - id: vpc-networking-1
+    type: diagnose
+    prompt: |
+      An EC2 instance in a public subnet has a public IP address. The security
+      group allows all outbound traffic. However, the instance cannot reach
+      the internet. You check the route table associated with the subnet.
+      What is most likely missing?
+    options:
+      a: An Elastic IP address
+      b: A route for 0.0.0.0/0 pointing to the Internet Gateway
+      c: A NAT Gateway in the same subnet
+      d: DNS resolution enabled on the VPC
+    answer: b
+    explanation: >
+      A public subnet is defined by having a route to an Internet Gateway. Even
+      if the instance has a public IP and the security group allows outbound
+      traffic, without a 0.0.0.0/0 route pointing to an IGW in the route table,
+      the instance cannot send or receive traffic from the internet.
+
+  - id: vpc-networking-2
+    type: complete
+    prompt: |
+      Complete the CIDR block for a /24 subnet starting at 10.0.1:
+
+        10.0.1.___
+    answer: 0/24
+    accept: [0/24]
+    explanation: >
+      A /24 CIDR block provides 256 IP addresses (10.0.1.0 through 10.0.1.255).
+      AWS reserves 5 addresses in each subnet (first four and last one), leaving
+      251 usable addresses. The /24 prefix length means the first 24 bits are
+      the network portion, and the last 8 bits are for host addresses.
+
+  - id: vpc-networking-3
+    type: match
+    prompt: |
+      Match each VPC component to its description.
+    left: ["Security Group", "NACL", "Route Table", "Internet Gateway"]
+    right: ["Stateful firewall at instance level", "Stateless firewall at subnet level", "Rules that direct network traffic", "Enables internet connectivity for the VPC"]
+    pairs: [[0,0], [1,1], [2,2], [3,3]]
+    explanation: >
+      Security Groups are stateful — return traffic is automatically allowed.
+      NACLs are stateless — you must define both inbound and outbound rules.
+      Route Tables contain rules that determine where traffic is directed.
+      Internet Gateways provide a target for internet-routable traffic and
+      perform NAT for instances with public IP addresses.
+
+  - id: vpc-networking-4
+    type: diagnose
+    prompt: |
+      An EC2 instance in a private subnet needs to reach the internet to
+      download packages. A NAT Gateway exists in a public subnet. The instance
+      still cannot reach the internet. What should you check first?
+    options:
+      a: The instance needs a public IP address
+      b: The private subnet route table needs a 0.0.0.0/0 route to the NAT Gateway
+      c: The NAT Gateway needs a security group allowing outbound traffic
+      d: The IGW must be in the same subnet as the instance
+    answer: b
+    explanation: >
+      For a private subnet to use a NAT Gateway, the private subnet's route
+      table must have a route for 0.0.0.0/0 pointing to the NAT Gateway ID.
+      The NAT Gateway itself must be in a public subnet (one with a route to
+      an IGW). NAT Gateways do not have security groups — they use NACLs of
+      their subnet. The instance does not need a public IP.
+
+  - id: vpc-networking-5
+    type: diagnose
+    prompt: |
+      You can SSH (port 22) into your EC2 instance, but when you try to
+      access the web application running on port 80, the connection is
+      refused. The web server is confirmed running on the instance.
+      What is the most likely cause?
+    options:
+      a: The route table is blocking port 80
+      b: The security group only allows inbound port 22 and needs a rule for port 80
+      c: The NACL is blocking port 80 outbound
+      d: The IGW only forwards SSH traffic
+    answer: b
+    explanation: >
+      Security Groups are deny-by-default for inbound traffic. If only port 22
+      is allowed inbound, port 80 connections will be refused. The fix is to
+      add an inbound rule allowing TCP port 80 (and/or 443 for HTTPS) from the
+      desired source CIDR. Since SSH works, the network path and route table
+      are functioning correctly.
+
+  - id: vpc-networking-6
+    type: complete
+    prompt: |
+      Complete the AWS CLI flag to allow all outbound traffic protocols in a
+      security group rule:
+
+        --protocol ___ --port all
+    answer: "-1"
+    accept: ["-1", all]
+    explanation: >
+      In AWS security group rules, protocol -1 means all protocols (TCP, UDP,
+      ICMP, etc.). When you specify --protocol -1, the --port parameter should
+      be set to all, allowing all ports for all protocols. This is typically
+      used for outbound rules where you want unrestricted egress traffic.
+
+  - id: vpc-networking-7
+    type: diagnose
+    prompt: |
+      You configured a NACL on a public subnet to allow inbound HTTP (port 80).
+      External clients can send requests to your web server, but they never
+      receive responses. The security group allows both inbound 80 and all
+      outbound. What is the issue?
+    options:
+      a: The IGW is not performing NAT correctly
+      b: The NACL is stateless and needs an outbound rule for ephemeral ports 1024-65535
+      c: The route table is missing a return route
+      d: The security group outbound rule is overridden by the NACL
+    answer: b
+    explanation: >
+      NACLs are stateless, meaning return traffic must be explicitly allowed.
+      When a client connects to port 80, the response goes back on an ephemeral
+      port (1024-65535). Without an outbound NACL rule allowing these ports,
+      the response packets are dropped. Security Groups are stateful and handle
+      this automatically, but NACLs require both directions to be configured.
+
+  - id: vpc-networking-8
+    type: complete
+    prompt: |
+      Complete the AWS CLI command to add a route to the internet via an
+      Internet Gateway:
+
+        aws ec2 create-route --route-table-id rtb-xxx --destination-cidr-block 0.0.0.0/0 --gateway-id ___
+    answer: igw-xxx
+    accept: [igw-xxx, igw-id, igw-12345]
+    explanation: >
+      The --gateway-id parameter takes the ID of an Internet Gateway, which
+      follows the format igw- followed by a unique identifier. This route
+      sends all traffic destined for addresses outside the VPC (0.0.0.0/0)
+      through the Internet Gateway, making the subnet a public subnet.
+
+  - id: vpc-networking-9
+    type: match
+    prompt: |
+      Match each subnet type to its defining route table characteristic.
+    left: ["Public subnet", "Private subnet", "VPN-only subnet"]
+    right: ["Has a route to an Internet Gateway", "Has a route to a NAT Gateway", "Has a route to a Virtual Private Gateway"]
+    pairs: [[0,0], [1,1], [2,2]]
+    explanation: >
+      A public subnet has a route table entry pointing 0.0.0.0/0 to an IGW.
+      A private subnet typically routes 0.0.0.0/0 to a NAT Gateway for outbound
+      internet access without exposing instances directly. A VPN-only subnet
+      routes traffic through a Virtual Private Gateway (VGW) which connects
+      to an on-premises network via VPN or Direct Connect.
+
+  - id: vpc-networking-10
+    type: diagnose
+    prompt: |
+      You established a VPC peering connection between VPC-A (10.0.0.0/16)
+      and VPC-B (10.1.0.0/16). The peering connection status shows "Active".
+      However, instances in VPC-A cannot ping instances in VPC-B.
+      Security groups in both VPCs allow ICMP from all sources.
+      What is missing?
+    options:
+      a: VPC peering does not support ICMP traffic
+      b: Route tables in both VPCs need routes to each other's CIDR via the peering connection
+      c: DNS resolution is not enabled on the peering connection
+      d: You need a transit gateway instead of peering
+    answer: b
+    explanation: >
+      An active VPC peering connection alone does not route traffic. You must
+      manually add routes in each VPC route table. VPC-A needs a route for
+      10.1.0.0/16 pointing to the peering connection ID, and VPC-B needs a
+      route for 10.0.0.0/16 pointing to the same peering connection. Without
+      these routes, instances have no path to reach the peered VPC.

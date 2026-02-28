@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Setup for VPC subnet no internet connectivity exercise - IGW not attached and route missing'
+
+Resources:
+  LabVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: vpc-01-lab-vpc
+
+  PublicSubnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref LabVPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: us-east-1a
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: vpc-01-public-subnet
+
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: vpc-01-igw
+
+  # BUG: The VPCGatewayAttachment is intentionally missing.
+  # The Internet Gateway exists but is NOT attached to the VPC.
+  # To fix, uncomment the following resource:
+  #
+  # AttachGateway:
+  #   Type: 'AWS::EC2::VPCGatewayAttachment'
+  #   Properties:
+  #     VpcId: !Ref LabVPC
+  #     InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref LabVPC
+      Tags:
+        - Key: Name
+          Value: vpc-01-public-rt
+
+  # BUG: The default route to the Internet Gateway is intentionally missing.
+  # To fix, uncomment the following resource:
+  #
+  # DefaultRoute:
+  #   Type: 'AWS::EC2::Route'
+  #   DependsOn: AttachGateway
+  #   Properties:
+  #     RouteTableId: !Ref PublicRouteTable
+  #     DestinationCidrBlock: 0.0.0.0/0
+  #     GatewayId: !Ref InternetGateway
+
+  SubnetRouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+Outputs:
+  VpcId:
+    Description: ID of the lab VPC
+    Value: !Ref LabVPC
+
+  SubnetId:
+    Description: ID of the public subnet
+    Value: !Ref PublicSubnet
+
+  InternetGatewayId:
+    Description: ID of the Internet Gateway (not attached to VPC)
+    Value: !Ref InternetGateway
+
+  RouteTableId:
+    Description: ID of the public route table
+    Value: !Ref PublicRouteTable

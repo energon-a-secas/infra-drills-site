@@ -1,0 +1,141 @@
+topic: DynamoDB Capacity
+section: aws
+difficulty: advanced
+related_drills: [dynamodb-01-throttled-reads]
+questions:
+  - id: dynamodb-capacity-1
+    type: diagnose
+    prompt: |
+      Your DynamoDB table has 100 provisioned RCUs. You are performing strongly
+      consistent reads on items that are 8 KB each. You expected to handle
+      100 reads per second but are getting throttled at around 50 reads per
+      second. Why?
+    options:
+      a: The table needs a GSI to handle the read load
+      b: Each 8 KB item consumes 2 RCUs because one RCU covers only 4 KB
+      c: Strongly consistent reads cost 4 RCUs per read
+      d: The partition key has too many distinct values
+    answer: b
+    explanation: >
+      One RCU provides one strongly consistent read of up to 4 KB per second.
+      For items larger than 4 KB, additional RCUs are consumed proportionally.
+      An 8 KB item uses 2 RCUs per strongly consistent read. Therefore 100 RCUs
+      can only handle 50 reads per second of 8 KB items, not 100. To handle
+      100 reads per second, you would need 200 RCUs.
+
+  - id: dynamodb-capacity-2
+    type: complete
+    prompt: |
+      Complete the statement:
+
+        One RCU = one strongly consistent read of up to ___ KB per second.
+    answer: 4
+    accept: ["4"]
+    explanation: >
+      One Read Capacity Unit provides one strongly consistent read per second
+      for items up to 4 KB. For eventually consistent reads, one RCU provides
+      two reads per second (each up to 4 KB). Items larger than 4 KB consume
+      additional RCUs rounded up to the next 4 KB boundary.
+
+  - id: dynamodb-capacity-3
+    type: match
+    prompt: |
+      Match each DynamoDB capacity unit to what it provides.
+    left: ["1 RCU (strongly consistent)", "1 WCU", "1 RCU (eventually consistent)", "1 WCU (transactional)"]
+    right: ["One 4 KB read per second", "One 1 KB write per second", "Two 4 KB reads per second", "One 0.5 KB write per second"]
+    pairs: [[0,0], [1,1], [2,2], [3,3]]
+    explanation: >
+      One RCU provides one strongly consistent 4 KB read per second, or two
+      eventually consistent 4 KB reads per second. One WCU provides one 1 KB
+      write per second. Transactional operations cost double — a transactional
+      write consumes 2 WCUs per 1 KB, effectively halving throughput. These
+      ratios are essential for calculating provisioned capacity correctly.
+
+  - id: dynamodb-capacity-4
+    type: diagnose
+    prompt: |
+      Your DynamoDB table has 1000 WCUs provisioned. The average item size is
+      only 500 bytes. On paper you should handle 1000 writes/second, but you
+      are getting ProvisionedThroughputExceededException. CloudWatch shows
+      total consumed WCUs are well below 1000. What is happening?
+    options:
+      a: Items under 1 KB still consume 1 WCU each
+      b: All writes are targeting the same partition key causing a hot partition
+      c: The table needs to be switched to on-demand mode
+      d: DynamoDB reserves 30% of WCUs for internal operations
+    answer: b
+    explanation: >
+      DynamoDB distributes provisioned capacity evenly across partitions. If all
+      writes target the same partition key, only one partition handles all the
+      load while other partitions sit idle. This causes throttling even when
+      total table capacity is sufficient. The fix is to design your partition
+      key for even distribution of writes across many distinct values.
+
+  - id: dynamodb-capacity-5
+    type: complete
+    prompt: |
+      Complete the statement:
+
+        One WCU = one write of up to ___ KB per second.
+    answer: 1
+    accept: ["1"]
+    explanation: >
+      One Write Capacity Unit provides one write per second for items up to 1 KB.
+      Items larger than 1 KB consume additional WCUs rounded up to the next 1 KB
+      boundary. For example, a 2.5 KB item consumes 3 WCUs per write. Transactional
+      writes consume 2 WCUs per 1 KB item.
+
+  - id: dynamodb-capacity-6
+    type: diagnose
+    prompt: |
+      You use BatchGetItem to retrieve 150 items from a DynamoDB table. The
+      response contains only 100 items and no errors. What happened to the
+      remaining 50 items?
+    options:
+      a: They were deleted between the request and response
+      b: BatchGetItem is limited to 100 items or 16 MB — remaining items are in UnprocessedKeys
+      c: DynamoDB silently drops items that exceed the partition throughput
+      d: The IAM policy only allows reading 100 items at a time
+    answer: b
+    explanation: >
+      BatchGetItem can retrieve a maximum of 100 items or 16 MB of data per call,
+      whichever limit is reached first. If the request exceeds these limits,
+      DynamoDB returns the items it could process and puts the remaining keys in
+      the UnprocessedKeys field of the response. Your application must check for
+      UnprocessedKeys and make additional BatchGetItem calls to retrieve them.
+
+  - id: dynamodb-capacity-7
+    type: diagnose
+    prompt: |
+      Your DynamoDB table is in on-demand capacity mode. The table normally
+      handles 500 requests per second. After a marketing event, traffic suddenly
+      spikes to 5000 requests per second. You start seeing throttling errors.
+      Why is on-demand mode throttling?
+    options:
+      a: On-demand mode has a hard limit of 1000 requests per second
+      b: On-demand can throttle if traffic exceeds double the previous peak within 30 minutes
+      c: On-demand mode requires a warm-up period of 24 hours
+      d: The table auto-scaled but the partition split has not completed
+    answer: b
+    explanation: >
+      On-demand mode automatically scales, but it can throttle if traffic
+      increases to more than double the previous peak within 30 minutes. Going
+      from 500 to 5000 requests per second (10x) exceeds this adaptive capacity
+      buffer. On-demand tables accommodate traffic up to double the previous
+      peak and continue scaling beyond that, but sudden extreme spikes can
+      temporarily exceed the scaling speed.
+
+  - id: dynamodb-capacity-8
+    type: complete
+    prompt: |
+      Complete the maximum number of items per BatchWriteItem call:
+
+        Up to ___ items per call
+    answer: 25
+    accept: ["25"]
+    explanation: >
+      BatchWriteItem can process up to 25 put or delete requests in a single
+      call, with a total payload limit of 16 MB and individual items limited
+      to 400 KB each. If some items fail, they are returned in the
+      UnprocessedItems field. Note that BatchWriteItem does not support update
+      operations — only put and delete.

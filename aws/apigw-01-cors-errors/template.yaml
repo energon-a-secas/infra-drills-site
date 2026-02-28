@@ -1,0 +1,140 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Setup for API Gateway CORS errors exercise - Lambda missing CORS headers and no OPTIONS method'
+
+Resources:
+  ItemsFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: cors-items-function
+      Handler: index.handler
+      Runtime: python3.12
+      Timeout: 10
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import json
+
+          def handler(event, context):
+              items = [
+                  {"id": 1, "name": "Widget A", "price": 9.99},
+                  {"id": 2, "name": "Widget B", "price": 14.99},
+                  {"id": 3, "name": "Widget C", "price": 19.99}
+              ]
+
+              # BUG: The response does not include CORS headers.
+              # Browsers will block the response because there is no
+              # Access-Control-Allow-Origin header.
+              return {
+                  "statusCode": 200,
+                  "body": json.dumps({"items": items})
+              }
+
+  LambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: cors-items-function-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  LambdaInvokePermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !Ref ItemsFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${CorsApi}/*'
+
+  CorsApi:
+    Type: 'AWS::ApiGateway::RestApi'
+    Properties:
+      Name: cors-api
+      Description: REST API with CORS issues
+
+  ItemsResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      RestApiId: !Ref CorsApi
+      ParentId: !GetAtt CorsApi.RootResourceId
+      PathPart: items
+
+  GetItemsMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      RestApiId: !Ref CorsApi
+      ResourceId: !Ref ItemsResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ItemsFunction.Arn}/invocations'
+
+  # BUG: No OPTIONS method is configured on the /items resource.
+  # Browsers send a preflight OPTIONS request before making cross-origin
+  # requests with certain characteristics. Without an OPTIONS method,
+  # the preflight request fails and the browser blocks the actual request.
+  #
+  # To fix, add an OPTIONS method with a MOCK integration that returns
+  # the appropriate CORS headers:
+  #
+  # OptionsMethod:
+  #   Type: 'AWS::ApiGateway::Method'
+  #   Properties:
+  #     RestApiId: !Ref CorsApi
+  #     ResourceId: !Ref ItemsResource
+  #     HttpMethod: OPTIONS
+  #     AuthorizationType: NONE
+  #     Integration:
+  #       Type: MOCK
+  #       RequestTemplates:
+  #         application/json: '{"statusCode": 200}'
+  #       IntegrationResponses:
+  #         - StatusCode: '200'
+  #           ResponseParameters:
+  #             method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+  #             method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+  #             method.response.header.Access-Control-Allow-Origin: "'*'"
+  #     MethodResponses:
+  #       - StatusCode: '200'
+  #         ResponseParameters:
+  #           method.response.header.Access-Control-Allow-Headers: true
+  #           method.response.header.Access-Control-Allow-Methods: true
+  #           method.response.header.Access-Control-Allow-Origin: true
+
+  ApiDeployment:
+    Type: 'AWS::ApiGateway::Deployment'
+    DependsOn:
+      - GetItemsMethod
+    Properties:
+      RestApiId: !Ref CorsApi
+
+  ApiStage:
+    Type: 'AWS::ApiGateway::Stage'
+    Properties:
+      RestApiId: !Ref CorsApi
+      DeploymentId: !Ref ApiDeployment
+      StageName: prod
+
+Outputs:
+  ApiId:
+    Description: ID of the REST API
+    Value: !Ref CorsApi
+
+  ApiEndpoint:
+    Description: URL of the API endpoint (LocalStack format)
+    Value: !Sub 'http://localhost:4566/restapis/${CorsApi}/prod/_user_request_/items'
+
+  FunctionName:
+    Description: Name of the Lambda function
+    Value: !Ref ItemsFunction
+
+  FunctionArn:
+    Description: ARN of the Lambda function
+    Value: !GetAtt ItemsFunction.Arn

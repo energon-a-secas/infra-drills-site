@@ -1,0 +1,133 @@
+topic: Service and Networking
+section: kubernetes
+difficulty: beginner
+related_drills: [k8s-04-service-selector-mismatch, k8s-10-network-policy-blocks-traffic]
+questions:
+  - id: svc-net-01
+    type: diagnose
+    prompt: |
+      A Service exists but kubectl get endpoints shows no endpoints. The pod
+      has labels app=web and tier=frontend, but the service selector is set to
+      app=web and tier=backend. What is the problem?
+    options:
+      a: The pod is not in the Ready state
+      b: The service selector labels do not match the pod labels
+      c: The service is of type ExternalName and does not use selectors
+      d: The endpoints controller is not running
+    answer: b
+    explanation: >
+      A service selects pods using label selectors. All selector labels must
+      match for a pod to be included as an endpoint. Here tier=backend on the
+      service does not match tier=frontend on the pod. Fix the selector to
+      match the actual pod labels so the service can route traffic correctly.
+
+  - id: svc-net-02
+    type: complete
+    prompt: |
+      Complete the full DNS name for a service called my-service in the
+      default namespace:
+      my-service.___
+    answer: default.svc.cluster.local
+    accept: ["default.svc.cluster.local", "NAMESPACE.svc.cluster.local"]
+    explanation: >
+      Kubernetes DNS follows the pattern service-name.namespace.svc.cluster.local.
+      For a service called my-service in the default namespace, the full DNS
+      name is my-service.default.svc.cluster.local. Within the same namespace
+      you can use just the service name.
+
+  - id: svc-net-03
+    type: match
+    prompt: |
+      Match each Kubernetes service type with its behavior.
+    left: ["ClusterIP", "NodePort", "LoadBalancer", "ExternalName"]
+    right: ["Internal cluster access only", "Static port on each node", "Cloud provider load balancer", "DNS CNAME alias to external service"]
+    pairs: [[0,0], [1,1], [2,2], [3,3]]
+    explanation: >
+      ClusterIP is the default type providing an internal IP reachable only
+      within the cluster. NodePort exposes the service on a static port on
+      every node. LoadBalancer provisions an external load balancer from the
+      cloud provider. ExternalName maps the service to a DNS CNAME record
+      pointing to an external hostname.
+
+  - id: svc-net-04
+    type: diagnose
+    prompt: |
+      A NodePort service is accessible when curling the node IP and port from
+      inside the cluster, but external clients cannot connect. The cloud
+      provider firewall only allows ports 22, 80, and 443. What is the issue?
+    options:
+      a: The service should be changed to ClusterIP type
+      b: The firewall does not allow the NodePort range (30000-32767)
+      c: The pod readiness probe is failing
+      d: kube-proxy is not running on the nodes
+    answer: b
+    explanation: >
+      NodePort services allocate a port in the range 30000-32767 by default.
+      If the firewall only allows ports 22, 80, and 443, traffic to the
+      NodePort will be blocked. You need to open the NodePort range in the
+      firewall or use a LoadBalancer service type instead.
+
+  - id: svc-net-05
+    type: complete
+    prompt: |
+      Complete the default NodePort range minimum value:
+      ___-32767
+    answer: "30000"
+    accept: ["30000"]
+    explanation: >
+      The default NodePort range in Kubernetes is 30000-32767. This can be
+      customized using the --service-node-port-range flag on the API server,
+      but the default range is what you will encounter in most clusters.
+
+  - id: svc-net-06
+    type: diagnose
+    prompt: |
+      An Ingress resource is configured but all requests return HTTP 503
+      Service Unavailable. The backend service has port 80, but the container
+      in the target pods listens on port 3000. The service spec shows port 80
+      and targetPort 80. What needs to change?
+    options:
+      a: Change the Ingress backend port to 3000
+      b: Change the service targetPort from 80 to 3000 to match the container
+      c: Add an annotation to the Ingress for port rewriting
+      d: Change the container to listen on port 80
+    answer: b
+    explanation: >
+      The service targetPort must match the port the container is actually
+      listening on. Traffic flows from Ingress to service port to targetPort
+      on the pod. If targetPort is 80 but the container listens on 3000, the
+      connection fails with 503. Change targetPort to 3000 so traffic reaches
+      the application correctly.
+
+  - id: svc-net-07
+    type: complete
+    prompt: |
+      Complete the command to expose a deployment as a service:
+      kubectl expose deployment my-app --port=80 --type=___
+    answer: ClusterIP
+    accept: ["ClusterIP", "NodePort", "LoadBalancer"]
+    explanation: >
+      kubectl expose creates a service for a deployment. The --type flag sets
+      the service type. ClusterIP is the default and provides internal-only
+      access. NodePort adds external access via node ports. LoadBalancer
+      provisions a cloud load balancer. Choose the type based on your access
+      requirements.
+
+  - id: svc-net-08
+    type: diagnose
+    prompt: |
+      A service is reachable using its ClusterIP address, but resolving the
+      service name fails with NXDOMAIN. Checking kube-system shows the
+      CoreDNS pod is in CrashLoopBackOff. What should you do?
+    options:
+      a: Restart all application pods to refresh DNS cache
+      b: Use IP addresses instead of DNS names for all services
+      c: Fix CoreDNS since DNS resolution requires a working CoreDNS deployment
+      d: Add hostAliases to all pods that need to resolve service names
+    answer: c
+    explanation: >
+      CoreDNS is the cluster DNS provider. When CoreDNS is down, pods cannot
+      resolve service names to IP addresses. The fix is to diagnose and repair
+      CoreDNS by checking its logs and configuration. Common issues include
+      corrupted ConfigMaps, resource limits being too low, or upstream DNS
+      server connectivity problems.

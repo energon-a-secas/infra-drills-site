@@ -1,0 +1,29 @@
+stages:
+  - build
+  - deploy
+
+build-app:
+  stage: build
+  image: alpine:latest
+  script:
+    - echo "Compiling application..."
+    - mkdir -p dist
+    - echo "compiled" > dist/app.jar
+    - echo "Build complete. Output written to dist/app.jar"
+    - ls -la dist/
+
+deploy-app:
+  stage: deploy
+  image: alpine:latest
+  script:
+    - echo "Starting deployment..."
+    - |
+      if test -f dist/app.jar; then
+        echo "Deploying dist/app.jar..."
+        echo "Deployment successful."
+      else
+        echo "ERROR: Build artifact not found!"
+        echo "Expected file dist/app.jar does not exist."
+        echo "The build output from the previous stage is missing."
+        exit 1
+      fi

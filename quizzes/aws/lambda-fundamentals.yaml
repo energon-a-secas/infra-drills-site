@@ -1,0 +1,139 @@
+topic: Lambda Fundamentals
+section: aws
+difficulty: beginner
+related_drills: [lambda-01-timeout-configuration, lambda-10-vpc-no-internet]
+questions:
+  - id: lambda-fundamentals-1
+    type: diagnose
+    prompt: |
+      Your Lambda function processes data from an SQS queue. The function
+      needs about 10 seconds to complete, but it keeps timing out with a
+      "Task timed out after 3.00 seconds" error. You have not changed any
+      default settings. What needs to change?
+    options:
+      a: Increase the Lambda memory allocation
+      b: Increase the Lambda timeout setting beyond 3 seconds
+      c: Switch from SQS to SNS as the event source
+      d: Enable provisioned concurrency
+    answer: b
+    explanation: >
+      The default Lambda timeout is 3 seconds. If your function needs more time,
+      you must increase the Timeout setting in the function configuration. The
+      timeout can be set anywhere from 1 second to a maximum of 900 seconds
+      (15 minutes). For this case, setting it to at least 15 seconds would
+      provide a safe margin above the 10 seconds needed.
+
+  - id: lambda-fundamentals-2
+    type: complete
+    prompt: |
+      Complete the SAM template to set a Lambda function timeout to 30 seconds:
+
+        Timeout: ___
+    answer: 30
+    accept: ["30"]
+    explanation: >
+      In a SAM or CloudFormation template, the Timeout property is specified in
+      seconds as an integer value. Setting Timeout to 30 gives the function 30
+      seconds to complete execution before Lambda terminates it. Always set the
+      timeout higher than your expected execution time to account for variability.
+
+  - id: lambda-fundamentals-3
+    type: match
+    prompt: |
+      Match each Lambda event source to its invocation type.
+    left: ["API Gateway", "S3 event notification", "SQS", "SNS"]
+    right: ["Synchronous invocation", "Asynchronous invocation", "Polling-based invocation", "Asynchronous invocation"]
+    pairs: [[0,0], [1,1], [2,2], [3,3]]
+    explanation: >
+      API Gateway invokes Lambda synchronously — it waits for the response.
+      S3 and SNS invoke Lambda asynchronously — they fire and forget, with
+      Lambda handling retries. SQS uses polling-based invocation where the
+      Lambda service polls the queue for messages and invokes your function
+      with batches of messages.
+
+  - id: lambda-fundamentals-4
+    type: diagnose
+    prompt: |
+      Your Lambda function is deployed in a VPC private subnet. It needs to
+      call an external API on the internet but the requests time out.
+      The function has correct IAM permissions and the security group
+      allows all outbound traffic. What is missing?
+    options:
+      a: A VPC endpoint for Lambda
+      b: A NAT Gateway in a public subnet with a route from the private subnet
+      c: An Internet Gateway attached directly to the private subnet
+      d: An Elastic IP assigned to the Lambda function
+    answer: b
+    explanation: >
+      Lambda functions in a VPC private subnet do not have direct internet access.
+      To reach the internet, you need a NAT Gateway deployed in a public subnet
+      and a route in the private subnet route table pointing 0.0.0.0/0 to the
+      NAT Gateway. Without this, all outbound internet requests from the Lambda
+      function will time out.
+
+  - id: lambda-fundamentals-5
+    type: complete
+    prompt: |
+      What is the maximum timeout value for an AWS Lambda function in seconds?
+
+        Timeout: ___
+    answer: 900
+    accept: ["900"]
+    explanation: >
+      The maximum Lambda timeout is 900 seconds (15 minutes). This is a hard
+      limit that cannot be increased. If your workload requires more than 15
+      minutes of execution time, you need to consider alternatives such as
+      AWS Step Functions, AWS Fargate, or breaking the work into smaller chunks.
+
+  - id: lambda-fundamentals-6
+    type: diagnose
+    prompt: |
+      Your Java-based Lambda function has cold starts taking over 5 seconds.
+      The function is configured with 128 MB of memory. Users are complaining
+      about slow response times on the first request. What is the best fix?
+    options:
+      a: Switch to Python runtime
+      b: Increase memory allocation which also increases CPU proportionally
+      c: Decrease the timeout to force faster execution
+      d: Disable CloudWatch logging
+    answer: b
+    explanation: >
+      Lambda allocates CPU power proportional to memory. At 128 MB, the function
+      gets minimal CPU. Increasing memory to 512 MB or higher gives more CPU,
+      which significantly reduces cold start times especially for Java. Other
+      strategies include using provisioned concurrency, GraalVM native images,
+      or SnapStart for Java, but increasing memory is the simplest first step.
+
+  - id: lambda-fundamentals-7
+    type: diagnose
+    prompt: |
+      Your Lambda function processes messages from an SQS queue. The function
+      runs successfully and returns 200, but the same messages keep reappearing
+      in the queue and getting processed again. The Lambda timeout is 60 seconds
+      and the SQS visibility timeout is 30 seconds. What is the problem?
+    options:
+      a: The Lambda function is not deleting the messages
+      b: The SQS visibility timeout is shorter than the Lambda timeout
+      c: The DLQ is sending messages back to the main queue
+      d: The Lambda event source mapping batch size is too large
+    answer: b
+    explanation: >
+      When SQS visibility timeout (30s) is less than the Lambda timeout (60s),
+      messages can become visible again in the queue while the Lambda is still
+      processing them. This causes duplicate processing. The fix is to set the
+      SQS visibility timeout to at least 6 times the Lambda function timeout
+      as recommended by AWS. In this case, set it to at least 360 seconds.
+
+  - id: lambda-fundamentals-8
+    type: complete
+    prompt: |
+      Complete the minimum memory allocation for a Lambda function:
+
+        minimum ___ MB to maximum 10240 MB
+    answer: 128
+    accept: ["128"]
+    explanation: >
+      Lambda memory can be configured between 128 MB and 10240 MB (10 GB) in
+      1 MB increments. Memory allocation directly affects CPU allocation — at
+      1769 MB a function gets one full vCPU. Choosing the right memory size
+      is important for both performance and cost optimization.

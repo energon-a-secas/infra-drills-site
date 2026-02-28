@@ -1,0 +1,331 @@
+# Drill Index — Central catalog of all drills
+#
+# Status definitions:
+#   complete   — README + resources + non-empty solution
+#   incomplete — has some content but missing solution or key files
+#   stub       — folder exists with empty/minimal files
+#
+# Numbering convention (for new drills):
+#   00-09: Tutorials / beginner
+#   10-19: Intermediate
+#   20-29: Advanced
+
+drills:
+  # ──────────────────────────────────────────────
+  # AWS
+  # ──────────────────────────────────────────────
+  - name: cfn-01-export-values
+    section: aws
+    service: cfn
+    difficulty: beginner
+    tags: [cloudformation, exports, cross-stack]
+    status: complete
+    prerequisites: []
+    description: >
+      Export VPC and subnet IDs from a CloudFormation stack so other stacks can reference them.
+
+  - name: iam-01-assume-role-issue
+    section: aws
+    service: iam
+    difficulty: beginner
+    tags: [iam, sts, assume-role, external-id]
+    status: complete
+    prerequisites: []
+    description: >
+      Cannot assume a role — the trust policy requires an External ID that isn't being passed.
+
+  - name: iam-02-s3-role-permissions
+    section: aws
+    service: iam
+    difficulty: beginner
+    tags: [iam, s3, console, list-buckets]
+    status: complete
+    prerequisites: []
+    description: >
+      User can access S3 bucket via CLI but can't see buckets in the console. Missing s3:ListAllMyBuckets permission.
+
+  - name: r53-01-missing-delegation
+    section: aws
+    service: r53
+    difficulty: intermediate
+    tags: [route53, dns, delegation, hosted-zone]
+    status: complete
+    prerequisites: []
+    description: >
+      DNS resolution fails for a subdomain because NS delegation records are missing from the parent hosted zone.
+
+  - name: s3-01-bucket-does-not-appear
+    section: aws
+    service: s3
+    difficulty: beginner
+    tags: [s3, encryption, bucket-policy]
+    status: complete
+    prerequisites: []
+    description: >
+      S3 bucket rejects uploads because bucket policy requires SSE-AES256 encryption header.
+
+  - name: lambda-01-timeout-configuration
+    section: aws
+    service: lambda
+    difficulty: beginner
+    tags: [lambda, timeout, http, configuration]
+    status: complete
+    prerequisites: []
+    description: >
+      Lambda always returns timeout error. Function makes HTTP call but timeout is set to 3s — too low.
+
+  - name: sqs-01-message-not-consumed
+    section: aws
+    service: sqs
+    difficulty: intermediate
+    tags: [sqs, lambda, event-source-mapping, dlq]
+    status: complete
+    prerequisites: []
+    description: >
+      SQS event source mapping targets wrong queue ARN (DLQ instead of main queue). Messages pile up, Lambda never fires.
+
+  - name: vpc-01-subnet-no-internet
+    section: aws
+    service: vpc
+    difficulty: intermediate
+    tags: [vpc, subnet, internet-gateway, route-table]
+    status: complete
+    prerequisites: []
+    description: >
+      Resource in public subnet can't reach internet. IGW not attached and route table missing default route.
+
+  - name: dynamodb-01-throttled-reads
+    section: aws
+    service: dynamodb
+    difficulty: advanced
+    tags: [dynamodb, throttling, provisioned-capacity, batch-operations]
+    status: complete
+    prerequisites: []
+    description: >
+      Table provisioned with 1 RCU. Batch reads get throttled. Must understand provisioned vs on-demand capacity.
+
+  - name: apigw-01-cors-errors
+    section: aws
+    service: apigw
+    difficulty: intermediate
+    tags: [api-gateway, cors, lambda-proxy, preflight]
+    status: complete
+    prerequisites: [lambda-01-timeout-configuration]
+    description: >
+      REST API works from curl but fails in browser with CORS errors. Lambda missing headers, no OPTIONS method.
+
+  - name: lambda-10-vpc-no-internet
+    section: aws
+    service: lambda
+    difficulty: intermediate
+    tags: [lambda, vpc, nat-gateway, vpc-endpoints, private-subnet]
+    status: complete
+    prerequisites: [vpc-01-subnet-no-internet]
+    description: >
+      Lambda in VPC can reach RDS but external API calls timeout. Private subnet has no NAT Gateway.
+
+  # ──────────────────────────────────────────────
+  # Kubernetes
+  # ──────────────────────────────────────────────
+  - name: k8s-00-tutorial
+    section: kubernetes
+    service: k8s
+    difficulty: beginner
+    tags: [kubectl, deployment, basics]
+    status: complete
+    prerequisites: []
+    description: >
+      Tutorial: basic Kubernetes deployment using kubectl and minikube.
+
+  - name: k8s-01-deployment-not-starting
+    section: kubernetes
+    service: k8s
+    difficulty: beginner
+    tags: [deployment, liveness-probe, port-configuration]
+    status: complete
+    prerequisites: [k8s-00-tutorial]
+    description: >
+      Deployment not responding — liveness probe configured on wrong port causes repeated restarts.
+
+  - name: k8s-09-tags
+    section: kubernetes
+    service: k8s
+    difficulty: beginner
+    tags: [labels, selectors]
+    status: stub
+    prerequisites: []
+    description: >
+      Placeholder drill about Kubernetes labels and selectors.
+
+  - name: eks-00-ingress
+    section: kubernetes
+    service: eks
+    difficulty: beginner
+    tags: [ingress, nginx, nodeport, minikube]
+    status: complete
+    prerequisites: [k8s-00-tutorial]
+    description: >
+      Tutorial: set up NGINX ingress controller with minikube to mimic ALB ingress on EKS.
+
+  - name: eks-01-broken-deploy
+    section: kubernetes
+    service: eks
+    difficulty: beginner
+    tags: [deployment, service, ingress, troubleshooting]
+    status: complete
+    prerequisites: [eks-00-ingress]
+    description: >
+      Deployment copied from working example but missing Service and Ingress. Pods run but app is inaccessible.
+
+  - name: eks-29-secrets-manager
+    section: kubernetes
+    service: eks
+    difficulty: advanced
+    tags: [secrets-manager, csi-driver, secretKeyRef, irsa]
+    status: complete
+    prerequisites: [eks-00-ingress]
+    description: >
+      Integrate AWS Secrets Manager with EKS pods using the CSI driver. Workaround for local testing.
+
+  - name: k8s-02-resource-limits-oom
+    section: kubernetes
+    service: k8s
+    difficulty: beginner
+    tags: [oomkilled, resource-limits, memory, crashloopbackoff]
+    status: complete
+    prerequisites: [k8s-00-tutorial]
+    description: >
+      Pod OOMKilled — memory limit set to 10Mi for nginx. CrashLoopBackOff. Diagnose with describe pod.
+
+  - name: k8s-03-configmap-mount-failure
+    section: kubernetes
+    service: k8s
+    difficulty: beginner
+    tags: [configmap, volume-mount, container-creating]
+    status: complete
+    prerequisites: [k8s-00-tutorial]
+    description: >
+      Deployment references non-existent ConfigMap. Pod stuck in ContainerCreating.
+
+  - name: k8s-04-service-selector-mismatch
+    section: kubernetes
+    service: k8s
+    difficulty: beginner
+    tags: [service, selector, labels, endpoints]
+    status: complete
+    prerequisites: [k8s-00-tutorial]
+    description: >
+      Service returns connection refused. Selector label doesn't match pod labels. No endpoints.
+
+  - name: k8s-10-network-policy-blocks-traffic
+    section: kubernetes
+    service: k8s
+    difficulty: intermediate
+    tags: [network-policy, ingress, pod-selector, default-deny]
+    status: complete
+    prerequisites: [k8s-01-deployment-not-starting]
+    description: >
+      Frontend can't talk to backend. Default-deny NetworkPolicy blocks all ingress. Must write allow rule.
+
+  - name: k8s-11-rolling-update-stuck
+    section: kubernetes
+    service: k8s
+    difficulty: intermediate
+    tags: [rolling-update, image-pull-backoff, rollout-undo]
+    status: complete
+    prerequisites: [k8s-01-deployment-not-starting]
+    description: >
+      Rolling update stuck — new image tag doesn't exist. ImagePullBackOff. Diagnose and rollout undo.
+
+  - name: k8s-12-rbac-forbidden
+    section: kubernetes
+    service: k8s
+    difficulty: intermediate
+    tags: [rbac, role, rolebinding, serviceaccount, forbidden]
+    status: complete
+    prerequisites: [k8s-01-deployment-not-starting]
+    description: >
+      ServiceAccount pod gets Forbidden when calling API. No Role/RoleBinding exists.
+
+  - name: k8s-14-hpa-not-scaling
+    section: kubernetes
+    service: k8s
+    difficulty: intermediate
+    tags: [hpa, autoscaling, metrics-server, resource-requests]
+    status: complete
+    prerequisites: [k8s-02-resource-limits-oom]
+    description: >
+      HPA shows unknown CPU and never scales. Metrics Server not installed and deployment has no resource requests.
+
+  - name: k8s-20-persistent-volume-wrong-access-mode
+    section: kubernetes
+    service: k8s
+    difficulty: advanced
+    tags: [persistent-volume, statefulset, access-modes, pvc]
+    status: complete
+    prerequisites: [k8s-01-deployment-not-starting]
+    description: >
+      StatefulSet with 2 replicas mounts PV with wrong capacity/access. Second pod stuck Pending.
+
+  # ──────────────────────────────────────────────
+  # GitLab CI/CD
+  # ──────────────────────────────────────────────
+  - name: gitlab-00-tutorial
+    section: gitlab
+    service: gitlab
+    difficulty: beginner
+    tags: [gitlab-ci, basics, hello-world]
+    status: incomplete
+    prerequisites: []
+    description: >
+      Tutorial: run a basic GitLab CI pipeline locally using gitlab-ci-local.
+
+  - name: gitlab-02-artifacts-not-passed
+    section: gitlab
+    service: gitlab
+    difficulty: beginner
+    tags: [artifacts, stages, dependencies, build-output]
+    status: complete
+    prerequisites: [gitlab-00-tutorial]
+    description: >
+      Build output missing in deploy stage. No artifacts block defined. Teaches artifacts vs cache.
+
+  - name: gitlab-03-docker-build-and-push
+    section: gitlab
+    service: gitlab
+    difficulty: intermediate
+    tags: [docker, dind, registry, multi-stage, rules, only-except]
+    status: complete
+    prerequisites: [gitlab-00-tutorial]
+    description: >
+      Multi-stage Docker build and push pipeline. Mixes rules/only-except syntax. Walkthrough and modernization.
+
+  - name: gitlab-01-cache-not-shared
+    section: gitlab
+    service: gitlab
+    difficulty: beginner
+    tags: [cache, variables, node-modules, ci-commit-ref-slug]
+    status: complete
+    prerequisites: [gitlab-00-tutorial]
+    description: >
+      Two-stage pipeline cache key uses $CI_COMMIT_SHA instead of $CI_COMMIT_REF_SLUG. Test stage can't find node_modules.
+
+  - name: gitlab-09-quotes-hell
+    section: gitlab
+    service: gitlab
+    difficulty: intermediate
+    tags: [yaml, quoting, variables, special-characters]
+    status: complete
+    prerequisites: [gitlab-00-tutorial]
+    description: >
+      Pipeline with YAML quoting issues. Hash comments, curly braces, variable expansion, nested quotes.
+
+  - name: gitlab-10-dependency-failure
+    section: gitlab
+    service: gitlab
+    difficulty: intermediate
+    tags: [needs, dag, pipeline-validation, typo]
+    status: complete
+    prerequisites: [gitlab-00-tutorial]
+    description: >
+      Three-stage pipeline. Needs array has a typo in job name. Pipeline fails at YAML validation.

@@ -1,0 +1,166 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Setup for Lambda VPC no internet exercise - private subnet without NAT Gateway'
+
+Resources:
+  LabVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: lambda-10-lab-vpc
+
+  PrivateSubnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref LabVPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: us-east-1a
+      Tags:
+        - Key: Name
+          Value: lambda-10-private-subnet
+
+  PrivateRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref LabVPC
+      Tags:
+        - Key: Name
+          Value: lambda-10-private-rt
+
+  # BUG: The private subnet has no route to the internet.
+  # There is no NAT Gateway and no route to 0.0.0.0/0.
+  # Lambda functions in this subnet can reach other resources within the VPC
+  # (like RDS) but cannot reach anything outside the VPC (external APIs,
+  # AWS service endpoints like S3, STS, SQS, etc.).
+  #
+  # To fix, you need either:
+  # Option A: Add a NAT Gateway in a public subnet and route traffic to it
+  # Option B: Add VPC Endpoints for the specific AWS services needed
+
+  PrivateSubnetRouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PrivateSubnet
+      RouteTableId: !Ref PrivateRouteTable
+
+  LambdaSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Security group for VPC Lambda function
+      VpcId: !Ref LabVPC
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrBlock: 0.0.0.0/0
+          Description: Allow all outbound traffic
+      Tags:
+        - Key: Name
+          Value: lambda-10-sg
+
+  LambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: vpc-data-processor-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                Resource: '*'
+
+  DataProcessorFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: vpc-data-processor
+      Handler: index.handler
+      Runtime: python3.12
+      Timeout: 30
+      Role: !GetAtt LambdaExecutionRole.Arn
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds:
+          - !Ref PrivateSubnet
+      Code:
+        ZipFile: |
+          import json
+          import urllib.request
+
+          def handler(event, context):
+              results = {}
+
+              # Test 1: Internal VPC connectivity (simulated RDS check)
+              # In a real scenario this would be a database query.
+              # Within the VPC, connectivity works fine.
+              results["rds_connection"] = "success"
+
+              # Test 2: External AWS service call (S3)
+              # This will TIMEOUT because the Lambda has no internet path.
+              try:
+                  req = urllib.request.Request(
+                      "https://s3.us-east-1.amazonaws.com",
+                      method="GET"
+                  )
+                  with urllib.request.urlopen(req, timeout=10) as response:
+                      results["s3_reachable"] = True
+              except Exception as e:
+                  results["s3_reachable"] = False
+                  results["s3_error"] = str(e)
+
+              # Test 3: External API call
+              # This will also TIMEOUT for the same reason.
+              try:
+                  req = urllib.request.Request(
+                      "https://httpbin.org/get",
+                      method="GET"
+                  )
+                  with urllib.request.urlopen(req, timeout=10) as response:
+                      results["external_api_reachable"] = True
+              except Exception as e:
+                  results["external_api_reachable"] = False
+                  results["external_api_error"] = str(e)
+
+              return {
+                  "statusCode": 200,
+                  "body": json.dumps(results)
+              }
+
+Outputs:
+  VpcId:
+    Description: ID of the lab VPC
+    Value: !Ref LabVPC
+
+  PrivateSubnetId:
+    Description: ID of the private subnet
+    Value: !Ref PrivateSubnet
+
+  RouteTableId:
+    Description: ID of the private route table
+    Value: !Ref PrivateRouteTable
+
+  SecurityGroupId:
+    Description: ID of the Lambda security group
+    Value: !Ref LambdaSecurityGroup
+
+  FunctionName:
+    Description: Name of the Lambda function
+    Value: !Ref DataProcessorFunction
+
+  FunctionArn:
+    Description: ARN of the Lambda function
+    Value: !GetAtt DataProcessorFunction.Arn

@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Setup for Lambda timeout configuration exercise'
+
+Resources:
+  HttpCheckerFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: http-checker
+      Handler: index.handler
+      Runtime: python3.12
+      Timeout: 3
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import urllib.request
+          import json
+
+          def handler(event, context):
+              url = "https://aws.amazon.com"
+              try:
+                  req = urllib.request.Request(url, method="GET")
+                  with urllib.request.urlopen(req, timeout=10) as response:
+                      status_code = response.status
+                      return {
+                          "statusCode": status_code,
+                          "body": json.dumps({
+                              "message": "HTTP request successful",
+                              "url": url,
+                              "status": status_code
+                          })
+                      }
+              except Exception as e:
+                  return {
+                      "statusCode": 500,
+                      "body": json.dumps({
+                          "message": "HTTP request failed",
+                          "error": str(e)
+                      })
+                  }
+
+  LambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: http-checker-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+Outputs:
+  FunctionName:
+    Description: Name of the HTTP checker Lambda function
+    Value: !Ref HttpCheckerFunction
+
+  FunctionArn:
+    Description: ARN of the HTTP checker Lambda function
+    Value: !GetAtt HttpCheckerFunction.Arn
+
+  RoleArn:
+    Description: ARN of the Lambda execution role
+    Value: !GetAtt LambdaExecutionRole.Arn

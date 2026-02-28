@@ -1,0 +1,114 @@
+topic: GitLab CI/CD Cache and Artifacts
+section: gitlab
+difficulty: beginner
+related_drills: [gitlab-01-cache-not-shared, gitlab-02-artifacts-not-passed]
+questions:
+  - id: cache-artifacts-1
+    type: diagnose
+    prompt: |
+      A test job needs the compiled binary produced by the build job. The build
+      job stores the binary using artifacts:paths, but the test job cannot find
+      the file. The test job does not have a dependencies or needs key defined.
+      What is the problem and how should it be fixed?
+    options:
+      a: Artifacts are only available if you add dependencies listing the build job, or use needs which automatically downloads artifacts
+      b: The binary must be stored in the cache instead of artifacts
+      c: Artifacts only work within the same stage
+      d: The test job needs to re-run the build script to generate the binary
+    answer: a
+    explanation: >
+      By default, a job downloads artifacts from all previous jobs in earlier
+      stages. However, if something is misconfigured or the job is in the same
+      stage, artifacts may not be available. Using dependencies explicitly lists
+      which jobs to download artifacts from. Alternatively, needs creates a DAG
+      dependency and automatically downloads artifacts from the specified jobs.
+
+  - id: cache-artifacts-2
+    type: complete
+    prompt: |
+      Complete the artifacts configuration to set an expiration time:
+
+      artifacts:
+        paths:
+          - build/
+        expire_in: ___
+    answer: 1 week
+    accept: ["1 week", "1 hour", "30 days", 1 week]
+    explanation: >
+      The expire_in keyword sets how long artifacts are retained before being
+      automatically deleted. It accepts human-readable duration strings such as
+      1 week, 1 hour, 30 days, or 3 months. If not specified, the instance
+      default expiration is used. Setting an appropriate expiry prevents
+      unnecessary storage consumption.
+
+  - id: cache-artifacts-3
+    type: match
+    prompt: |
+      Match each GitLab CI/CD keyword to its function.
+    left: ["cache", "artifacts", "dependencies", "needs"]
+    right: ["Speed up jobs with reusable files", "Pass files between stages", "Select which job artifacts to download", "DAG job ordering with artifact download"]
+    pairs: [[0,0], [1,1], [2,2], [3,3]]
+    explanation: >
+      cache stores files (like vendor dependencies) across pipeline runs to speed
+      up jobs. artifacts passes files from one job to downstream jobs within the
+      same pipeline. dependencies controls which jobs a given job downloads
+      artifacts from. needs creates a DAG dependency that also automatically
+      downloads artifacts from the specified jobs.
+
+  - id: cache-artifacts-4
+    type: diagnose
+    prompt: |
+      A team notices that their cache works on the main branch but not on feature
+      branches. Each feature branch job reports a cache miss and downloads
+      dependencies from scratch. The cache configuration does not specify a key.
+      What is the problem and how should it be fixed?
+    options:
+      a: Cache is disabled on feature branches by default
+      b: The default cache key includes the branch ref, so each branch has its own cache; set an explicit key or use $CI_COMMIT_REF_SLUG with a fallback key
+      c: Feature branches cannot use cache because they are not protected
+      d: The cache:paths configuration needs to include the branch name
+    answer: b
+    explanation: >
+      By default, GitLab scopes cache per branch. A new feature branch has no
+      existing cache, so the first pipeline on that branch always misses. To
+      share cache across branches, set an explicit cache key that does not vary
+      by branch, or use cache:key:files to key on a lockfile. You can also use
+      cache:key:prefix with a fallback to the default branch cache.
+
+  - id: cache-artifacts-5
+    type: complete
+    prompt: |
+      Complete the cache configuration to cache the node_modules directory:
+
+      cache:
+        paths:
+          - ___
+    answer: node_modules/
+    accept: [node_modules/, node_modules]
+    explanation: >
+      The cache:paths key lists directories or files to cache between pipeline
+      runs. For Node.js projects, caching node_modules/ avoids running npm
+      install from scratch on every pipeline run. It is often combined with a
+      cache key based on the lockfile, such as key:files pointing to
+      package-lock.json, to invalidate the cache when dependencies change.
+
+  - id: cache-artifacts-6
+    type: diagnose
+    prompt: |
+      A deploy job takes a long time to start. Investigation shows it downloads
+      artifacts from every job in all previous stages, including large test
+      reports and coverage data it does not need. What is the problem and how
+      should it be fixed?
+    options:
+      a: Set the deploy job's artifacts:paths to empty
+      b: Use dependencies: [] to download no artifacts, or list only the specific jobs whose artifacts are needed
+      c: Increase the runner disk size to speed up artifact downloads
+      d: Move the deploy job to the same stage as the build job
+    answer: b
+    explanation: >
+      By default, a job downloads artifacts from all jobs in earlier stages. When
+      previous stages produce large artifacts, this causes unnecessary download
+      time. Setting dependencies to an empty array prevents downloading any
+      artifacts. Alternatively, list only the specific jobs whose output the
+      deploy job actually needs. Using needs also limits artifact downloads to
+      only the specified dependency jobs.

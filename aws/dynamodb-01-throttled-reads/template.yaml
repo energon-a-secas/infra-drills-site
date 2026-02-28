@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Setup for DynamoDB throttled reads exercise - table with absurdly low RCU'
+
+Resources:
+  ProductCatalogTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: product-catalog
+      AttributeDefinitions:
+        - AttributeName: product_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: product_id
+          KeyType: HASH
+      # BUG: ReadCapacityUnits is set to 1, far too low for batch reads of 10-20 items
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 5
+
+Outputs:
+  TableName:
+    Description: Name of the product catalog DynamoDB table
+    Value: !Ref ProductCatalogTable
+
+  TableArn:
+    Description: ARN of the product catalog DynamoDB table
+    Value: !GetAtt ProductCatalogTable.Arn

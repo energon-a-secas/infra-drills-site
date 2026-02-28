@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local Drills — Troubleshooting Challenges</title>
+  <meta name="description" content="Interactive troubleshooting challenges for AWS, Kubernetes, and GitLab CI/CD. Practice locally with LocalStack, Minikube, and gitlab-ci-local.">
+  <meta name="theme-color" content="#0B1224">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Highlight.js — Catppuccin Mocha theme -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/catppuccin-mocha.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/hcl.min.js"></script>
+
+  <!-- Marked.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js"></script>
+
+  <!-- App -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header" role="banner">
+    <div class="header-inner">
+      <a href="#/" class="logo" aria-label="Local Drills home">
+        <img class="logo-icon" src="favicon-32x32.png" alt="" aria-hidden="true" width="32" height="32">
+        <span class="logo-text">Local Drills</span>
+      </a>
+      <span class="header-count" id="header-count" aria-live="polite"></span>
+      <nav class="header-nav" aria-label="Site navigation">
+        <a href="#/quizzes" class="header-link">Quizzes</a>
+        <a href="https://github.com" class="header-link" target="_blank" rel="noopener" aria-label="View on GitHub">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="app" role="main">
+    <div class="loading" aria-label="Loading drill data">Loading drills...</div>
+  </main>
+
+  <footer class="site-footer" role="contentinfo">
+    <div class="footer-inner">
+      <p>Local Drills &mdash; Practice AWS, Kubernetes & GitLab CI/CD troubleshooting locally.</p>
+      <p class="footer-sub">Built with LocalStack, Minikube & gitlab-ci-local. No cloud costs.</p>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

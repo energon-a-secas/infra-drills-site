@@ -1,0 +1,125 @@
+topic: GitLab CI/CD YAML Quoting and Special Characters
+section: gitlab
+difficulty: intermediate
+related_drills: [gitlab-09-quotes-hell]
+questions:
+  - id: yaml-quoting-1
+    type: diagnose
+    prompt: |
+      A pipeline fails with a YAML parse error on this line:
+
+      script: echo {test}
+
+      The error indicates an unexpected mapping. What is the problem and how
+      should it be fixed?
+    options:
+      a: The echo command is not available in the runner image
+      b: Curly braces are interpreted as a YAML mapping; quote the string with double or single quotes
+      c: The script keyword requires an array, not a single string
+      d: The word test is a YAML reserved keyword
+    answer: b
+    explanation: >
+      YAML interprets curly braces as flow mapping syntax. When the YAML parser
+      encounters {test}, it tries to parse it as a mapping and fails. Wrapping
+      the value in quotes prevents this interpretation. Both single quotes
+      (script: 'echo {test}') and double quotes (script: "echo {test}") work.
+      Other special characters that require quoting include colons, hash signs,
+      square brackets, and exclamation marks.
+
+  - id: yaml-quoting-2
+    type: complete
+    prompt: |
+      Which quoting style prevents variable expansion in GitLab CI YAML?
+
+      To preserve a literal $VAR without expansion, use ___ quotes.
+    answer: single
+    accept: [single, "single quotes", "'"]
+    explanation: >
+      Single quotes in YAML preserve the literal string content without any
+      interpretation. A value like '$MY_VAR' will remain as the literal text
+      $MY_VAR. Double quotes allow escape sequences and, in GitLab CI context,
+      variables within double-quoted strings are expanded by the shell during
+      script execution. Use single quotes when you need the exact literal value.
+
+  - id: yaml-quoting-3
+    type: match
+    prompt: |
+      Match each YAML quoting or block scalar style to its behavior.
+    left: ["single quotes", "double quotes", "pipe |", "greater-than >"]
+    right: ["No variable expansion", "Variable expansion", "Literal block (keeps newlines)", "Folded block (joins lines)"]
+    pairs: [[0,0], [1,1], [2,2], [3,3]]
+    explanation: >
+      Single quotes preserve content literally with no special character
+      processing. Double quotes allow escape sequences and variable expansion
+      in shell contexts. The pipe (|) block scalar preserves newlines exactly
+      as written, making it ideal for multi-line scripts. The greater-than (>)
+      folded scalar joins consecutive lines with spaces, useful for long
+      explanations or descriptions that should flow as a single paragraph.
+
+  - id: yaml-quoting-4
+    type: diagnose
+    prompt: |
+      A pipeline fails with a YAML parse error on this rules configuration:
+
+      rules:
+        - if: $CI_COMMIT_BRANCH == "main"
+
+      The error points to the line containing if: and mentions an unexpected
+      mapping value. What is the problem and how should it be fixed?
+    options:
+      a: The variable CI_COMMIT_BRANCH does not exist in this context
+      b: The colon after if makes the YAML parser interpret it as a mapping key; quote the entire value
+      c: The double equals operator is not supported in rules
+      d: The rules keyword must come before the script keyword
+    answer: b
+    explanation: >
+      In YAML, a colon followed by a space is the mapping indicator. The parser
+      sees if: as a mapping key and then tries to parse the rest as its value,
+      which conflicts with the outer mapping structure. The fix is to quote the
+      entire condition string, for example:
+      if: '$CI_COMMIT_BRANCH == "main"'. This tells the parser to treat
+      everything after if: as a single string value.
+
+  - id: yaml-quoting-5
+    type: complete
+    prompt: |
+      Complete the block scalar indicator to preserve newlines in a multi-line
+      script:
+
+      script: ___
+        echo "step 1"
+        echo "step 2"
+        echo "step 3"
+    answer: "|"
+    accept: ["|", "|-"]
+    explanation: >
+      The pipe character (|) introduces a literal block scalar in YAML. It
+      preserves newlines exactly as written, so each echo command will be on
+      its own line. The variant |- strips the trailing newline. In GitLab CI,
+      multi-line scripts using | are passed to the shell with newlines intact,
+      allowing each line to execute as a separate command. The alternative >
+      would fold all lines into one, which is not what you want for scripts.
+
+  - id: yaml-quoting-6
+    type: diagnose
+    prompt: |
+      A developer writes the following script line in their .gitlab-ci.yml:
+
+      script:
+        - echo 'Version is $BUILD_VERSION'
+
+      The job runs successfully but prints "Version is $BUILD_VERSION" literally
+      instead of the variable's value. What is the cause and the fix?
+    options:
+      a: The variable BUILD_VERSION is not defined in the project settings
+      b: Single quotes prevent variable expansion; use double quotes to allow the shell to expand the variable
+      c: The echo command does not support variable interpolation
+      d: Variables can only be used in the variables section, not in scripts
+    answer: b
+    explanation: >
+      In shell execution, single quotes preserve everything literally. The
+      string $BUILD_VERSION is passed to echo as-is without expansion. To have
+      the shell substitute the variable's value, use double quotes instead:
+      echo "Version is $BUILD_VERSION". This applies both to the shell behavior
+      at runtime and is consistent with how YAML single quotes prevent special
+      character interpretation at the parsing level.

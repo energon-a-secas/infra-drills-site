@@ -1,0 +1,138 @@
+topic: Storage Concepts
+section: kubernetes
+difficulty: intermediate
+related_drills: [k8s-20-persistent-volume-wrong-access-mode]
+questions:
+  - id: storage-01
+    type: diagnose
+    prompt: |
+      A PersistentVolumeClaim is stuck in Pending status. The PVC requests 10Gi
+      of storage, but the only available PersistentVolume has 5Gi capacity and
+      no StorageClass is configured for dynamic provisioning. What should you do?
+    options:
+      a: Delete the PVC and recreate it with a smaller size
+      b: Create a PV with at least 10Gi capacity or configure a StorageClass for dynamic provisioning
+      c: Restart the kube-controller-manager to force binding
+      d: Change the PVC access mode to ReadWriteMany
+    answer: b
+    explanation: >
+      A PVC binds to a PV that satisfies its requirements including capacity
+      and access modes. If no PV has enough capacity and no StorageClass is
+      available for dynamic provisioning, the PVC stays Pending. Either create
+      a PV with sufficient capacity or set up a StorageClass with a provisioner
+      for automatic volume creation.
+
+  - id: storage-02
+    type: complete
+    prompt: |
+      Complete the access mode that allows read-write access from a single node:
+      accessModes: ["___"]
+    answer: ReadWriteOnce
+    accept: ["ReadWriteOnce", "RWO"]
+    explanation: >
+      ReadWriteOnce (RWO) allows the volume to be mounted as read-write by a
+      single node. This is the most common access mode and is supported by
+      most storage backends. Multiple pods on the same node can still access
+      the volume simultaneously.
+
+  - id: storage-03
+    type: match
+    prompt: |
+      Match each access mode abbreviation with its meaning.
+    left: ["RWO", "ROX", "RWX", "RWOP"]
+    right: ["Single node read-write", "Many nodes read-only", "Many nodes read-write", "Single pod read-write"]
+    pairs: [[0,0], [1,1], [2,2], [3,3]]
+    explanation: >
+      RWO (ReadWriteOnce) allows read-write on one node. ROX (ReadOnlyMany)
+      allows read-only on many nodes. RWX (ReadWriteMany) allows read-write
+      on many nodes and is needed for shared storage. RWOP (ReadWriteOncePod)
+      is the strictest mode, allowing read-write by only a single pod, which
+      was introduced in Kubernetes 1.22.
+
+  - id: storage-04
+    type: diagnose
+    prompt: |
+      A PV has status Released after its PVC was deleted. A new PVC with the
+      same spec is created but stays Pending and does not bind to the existing
+      PV. The PV reclaim policy is Retain. What must be done?
+    options:
+      a: Change the reclaim policy to Delete and recreate the PV
+      b: Delete the old PVC reference (claimRef) from the PV spec, or create a new PV
+      c: Restart the persistent volume controller
+      d: Set the PV status back to Available using kubectl patch
+    answer: b
+    explanation: >
+      When a PV has reclaim policy Retain and its PVC is deleted, the PV
+      enters Released state and keeps a claimRef to the old PVC. It will not
+      bind to a new PVC until the claimRef is cleared. You can edit the PV
+      to remove the claimRef field, which returns it to Available status, or
+      create a new PV entirely.
+
+  - id: storage-05
+    type: complete
+    prompt: |
+      Complete the StorageClass name commonly used as the default:
+      storageClassName: "___"
+    answer: standard
+    accept: ["standard", "gp2", "default"]
+    explanation: >
+      The default StorageClass name varies by environment. Minikube uses
+      "standard", AWS EKS uses "gp2" or "gp3", GKE uses "standard" or
+      "standard-rwo", and AKS uses "default". The default StorageClass is
+      marked with the annotation storageclass.kubernetes.io/is-default-class
+      set to true.
+
+  - id: storage-06
+    type: diagnose
+    prompt: |
+      A PVC is successfully bound to a PV, but the pod using it is stuck in
+      ContainerCreating. Events show "MountVolume.MountDevice failed: format
+      of disk /dev/xvdf failed". The StorageClass has fsType set to "ntfs"
+      on a Linux node. What is the issue?
+    options:
+      a: The volume size is too small for the filesystem
+      b: The fsType in StorageClass is wrong; use a Linux-compatible type like ext4 or xfs
+      c: The node needs additional storage drivers installed
+      d: The PVC should request a different access mode
+    answer: b
+    explanation: >
+      The fsType in the StorageClass determines how the volume is formatted.
+      NTFS is a Windows filesystem and will fail to format on Linux nodes.
+      Change the fsType to a Linux-compatible filesystem such as ext4 or xfs.
+      Most StorageClasses default to ext4 if fsType is not specified.
+
+  - id: storage-07
+    type: diagnose
+    prompt: |
+      Two pods in the same deployment need to share data via a PVC. The PVC
+      uses access mode ReadWriteOnce. The first pod mounts successfully, but
+      the second pod fails with "Multi-Attach error for volume: Volume is
+      already attached to node-1". The pods are on different nodes. What
+      should you do?
+    options:
+      a: Move both pods to the same node using nodeAffinity
+      b: Change the access mode to ReadWriteMany (RWX) with a compatible storage backend
+      c: Increase the PV size to allow multiple attachments
+      d: Add a sidecar container to handle file sharing
+    answer: b
+    explanation: >
+      ReadWriteOnce only allows the volume to be mounted on a single node. If
+      pods land on different nodes, the second pod cannot attach the volume.
+      To share a volume across nodes, use ReadWriteMany (RWX) with a storage
+      backend that supports it, such as NFS, EFS, or CephFS. Alternatively,
+      use pod affinity to colocate pods on the same node.
+
+  - id: storage-08
+    type: complete
+    prompt: |
+      Complete the PV reclaim policy that automatically deletes the volume
+      when the PVC is released:
+      persistentVolumeReclaimPolicy: ___
+    answer: Delete
+    accept: ["Delete", "Retain", "Recycle"]
+    explanation: >
+      The Delete policy removes the PV and its associated storage when the
+      PVC is deleted. Retain keeps the PV and its data for manual cleanup.
+      Recycle (deprecated) performed a basic rm -rf on the volume. Delete is
+      the default for dynamically provisioned volumes and is appropriate when
+      data does not need to survive PVC deletion.

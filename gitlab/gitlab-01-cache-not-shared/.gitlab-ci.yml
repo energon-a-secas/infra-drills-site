@@ -1,0 +1,30 @@
+stages:
+  - build
+  - test
+
+cache:
+  key: $CI_COMMIT_SHA
+  paths:
+    - node_modules/
+
+install-dependencies:
+  stage: build
+  image: node:18-alpine
+  script:
+    - echo "Running npm install..."
+    - mkdir -p node_modules
+    - echo "installed" > node_modules/.marker
+    - echo "Dependencies installed successfully."
+
+run-tests:
+  stage: test
+  image: node:18-alpine
+  script:
+    - echo "Running tests..."
+    - |
+      if [ ! -f node_modules/.marker ]; then
+        echo "ERROR: Cannot find module - node_modules is missing!"
+        echo "The cache from the build stage was not found."
+        exit 1
+      fi
+    - echo "All tests passed."

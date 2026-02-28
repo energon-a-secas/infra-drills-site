@@ -1,0 +1,177 @@
+topic: IAM Permissions
+section: aws
+difficulty: intermediate
+related_drills: [iam-02-s3-role-permissions]
+questions:
+  - id: iam-permissions-1
+    type: diagnose
+    prompt: |
+      A user has an IAM policy that explicitly allows s3:GetObject on all
+      resources. However, the user still gets Access Denied when trying to
+      read from S3. The account is part of an AWS Organization, and the SCP
+      attached to the OU has an explicit Deny for s3:GetObject.
+      What takes precedence?
+    options:
+      a: The IAM Allow policy wins because it is closest to the user
+      b: The explicit Deny in the SCP always wins
+      c: Neither — the request is evaluated as implicitly denied
+      d: The SCP is only advisory and does not enforce permissions
+    answer: b
+    explanation: >
+      In AWS IAM policy evaluation, an explicit Deny always overrides any Allow.
+      This is true regardless of where the Deny comes from — whether it is an
+      SCP, a permission boundary, a resource policy, or an identity policy.
+      Explicit deny is the highest priority in the evaluation logic.
+
+  - id: iam-permissions-2
+    type: complete
+    prompt: |
+      Complete the command to assume an IAM role:
+
+        aws sts assume-role --role-arn ___ --role-session-name test
+    answer: arn:aws:iam::123456789012:role/MyRole
+    accept: ["arn:aws:iam::123456789012:role/MyRole", "arn:aws:iam::ACCOUNT:role/ROLE-NAME"]
+    explanation: >
+      The --role-arn parameter requires the full ARN of the IAM role to assume.
+      The format is arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME. The assume-role
+      call returns temporary security credentials (access key, secret key, and
+      session token) that you can use to make API calls with the role permissions.
+
+  - id: iam-permissions-3
+    type: match
+    prompt: |
+      Match each IAM concept to its description.
+    left: ["IAM Policy", "Trust Policy", "Permission Boundary", "SCP"]
+    right: ["Controls what an identity CAN do", "Controls who can ASSUME a role", "Sets maximum permissions for an identity", "Organization-wide guardrails"]
+    pairs: [[0,0], [1,1], [2,2], [3,3]]
+    explanation: >
+      IAM policies define the permissions for identities. Trust policies on roles
+      define which principals can assume the role. Permission boundaries set an
+      upper limit on what permissions an IAM entity can have, regardless of its
+      identity policies. SCPs are applied at the AWS Organization level to
+      restrict what actions accounts in an OU can perform.
+
+  - id: iam-permissions-4
+    type: diagnose
+    prompt: |
+      You are setting up cross-account access. Account B's role has a trust
+      policy allowing Account A. When Account A tries to assume the role,
+      they get:
+
+        An error occurred (AccessDenied) when calling the AssumeRole operation
+
+      The trust policy includes a condition requiring sts:ExternalId. Account A
+      is not passing an External ID. What is the fix?
+    options:
+      a: Remove the trust policy and recreate it
+      b: Add --external-id with the correct value to the assume-role call
+      c: Change the trust policy to use arn instead of account ID
+      d: Enable MFA on Account A's user
+    answer: b
+    explanation: >
+      When a trust policy includes a condition for sts:ExternalId, the caller
+      must include the matching --external-id parameter in the assume-role call.
+      External ID is a security mechanism to prevent the confused deputy problem
+      in cross-account access scenarios. Without the correct External ID the
+      assume-role call is denied.
+
+  - id: iam-permissions-5
+    type: complete
+    prompt: |
+      Complete the policy effect to deny an action:
+
+        "Effect": "___"
+    answer: Deny
+    accept: [Deny]
+    explanation: >
+      IAM policy statements require an Effect of either Allow or Deny. An
+      explicit Deny always takes precedence over any Allow statement. This
+      is a fundamental rule of IAM policy evaluation and cannot be overridden.
+
+  - id: iam-permissions-6
+    type: diagnose
+    prompt: |
+      A Lambda function needs to read from an S3 bucket. You created an IAM
+      role with s3:GetObject permission and attached it to the Lambda. But
+      the Lambda still gets Access Denied on S3 calls. The role's trust
+      policy currently lists ec2.amazonaws.com as the trusted service.
+      What is wrong?
+    options:
+      a: Lambda needs s3:ListBucket permission too
+      b: The trust policy must allow lambda.amazonaws.com as the trusted service
+      c: S3 bucket policy must explicitly allow the Lambda role
+      d: Lambda functions cannot use IAM roles
+    answer: b
+    explanation: >
+      For a Lambda function to use an IAM role as its execution role, the role
+      trust policy must include lambda.amazonaws.com as an allowed principal.
+      If the trust policy only allows ec2.amazonaws.com, the Lambda service
+      cannot assume the role, and all API calls from the function will fail
+      with Access Denied.
+
+  - id: iam-permissions-7
+    type: diagnose
+    prompt: |
+      An IAM user has an identity policy that allows s3:* on all resources.
+      However, the user also has a permission boundary attached that only
+      allows s3:GetObject and s3:ListBucket. When the user tries
+      s3:PutObject, it is denied. Why?
+    options:
+      a: The identity policy is malformed
+      b: There is an explicit Deny somewhere
+      c: Effective permissions are the intersection of identity policy and permission boundary
+      d: Permission boundaries only apply to federated users
+    answer: c
+    explanation: >
+      Effective permissions are the intersection of the identity-based policy
+      and the permission boundary. Even though the identity policy allows s3:*,
+      the permission boundary only allows s3:GetObject and s3:ListBucket. Since
+      s3:PutObject is not in the permission boundary, the request is denied.
+      Permission boundaries act as a maximum permissions cap.
+
+  - id: iam-permissions-8
+    type: complete
+    prompt: |
+      Complete the principal in a trust policy to allow AWS Lambda to assume the role:
+
+        "Service": "___"
+    answer: lambda.amazonaws.com
+    accept: [lambda.amazonaws.com]
+    explanation: >
+      The Service principal for Lambda in a trust policy is lambda.amazonaws.com.
+      This tells IAM that the AWS Lambda service is allowed to call sts:AssumeRole
+      on this role. Each AWS service has its own service principal that follows
+      the pattern service.amazonaws.com.
+
+  - id: iam-permissions-9
+    type: diagnose
+    prompt: |
+      An IAM user can launch EC2 instances in us-east-1 but gets Access Denied
+      when trying to launch in us-west-2. The IAM policy allows ec2:RunInstances
+      on all resources. What is restricting the region?
+    options:
+      a: EC2 is not available in us-west-2
+      b: A condition key aws:RequestedRegion in the policy restricts to us-east-1
+      c: The user needs a separate policy per region
+      d: VPC in us-west-2 does not exist
+    answer: b
+    explanation: >
+      The aws:RequestedRegion condition key can be used in IAM policies to restrict
+      which AWS regions an action can be performed in. Even though the Resource
+      is set to *, a condition like "aws:RequestedRegion": "us-east-1" limits
+      the action to that region only. This is a common pattern for enforcing
+      regional compliance requirements.
+
+  - id: iam-permissions-10
+    type: match
+    prompt: |
+      Match each policy evaluation step to its role in the evaluation process.
+    left: ["Explicit Deny check", "SCP evaluation", "Permission Boundary evaluation", "Identity Policy evaluation"]
+    right: ["Always checked first — overrides everything", "Organization level guardrails", "Maximum permissions cap", "What is actually allowed for the identity"]
+    pairs: [[0,0], [1,1], [2,2], [3,3]]
+    explanation: >
+      AWS evaluates policies in a specific order. First, any explicit Deny from
+      any policy type immediately blocks the request. Then SCPs are checked at the
+      organization level. Permission boundaries set the maximum allowed scope.
+      Finally, identity-based policies determine what is actually permitted. A
+      request must be allowed at every level and denied at none.
