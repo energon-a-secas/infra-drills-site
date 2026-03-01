@@ -183,6 +183,10 @@
       font-size: 2rem;
       line-height: 1;
     }
+    .drill-card-icon img {
+      width: 40px; height: 40px; display: block;
+      filter: drop-shadow(0 0 5px rgba(255,255,255,.5));
+    }
     .drill-card h3 {
       font-size: var(--text-base);
       font-weight: 600;
@@ -298,7 +302,7 @@
         <div class="header-subtitle">Cloud infrastructure challenges, locally</div>
       </div>
     </div>
-    <a class="header-home" href="https://ehq.cl/" title="ehq.cl" target="_blank" rel="noopener">
+    <a class="header-home" href="https://neorgon.com/" title="neorgon.com" target="_blank" rel="noopener noreferrer">
       <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
         <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
       </svg>
@@ -340,7 +344,7 @@
     <div class="drill-grid">
 
       <a class="drill-card" href="https://github.com/energon-a-secas/local-drills/tree/main/aws" target="_blank" rel="noopener">
-        <div class="drill-card-icon" aria-hidden="true">☁️</div>
+        <div class="drill-card-icon"><img src="assets/icons/aws-svgrepo-com.svg" alt="AWS"></div>
         <h3>AWS / LocalStack</h3>
         <p>S3, Lambda, IAM, SQS, VPC, DynamoDB, Route 53, CloudFormation — simulated with LocalStack Pro.</p>
         <div class="drill-card-meta">
@@ -350,7 +354,7 @@
       </a>
 
       <a class="drill-card" href="https://github.com/energon-a-secas/local-drills/tree/main/kubernetes" target="_blank" rel="noopener">
-        <div class="drill-card-icon" aria-hidden="true">⎈</div>
+        <div class="drill-card-icon"><img src="assets/icons/kubernetes-svgrepo-com.svg" alt="Kubernetes"></div>
         <h3>Kubernetes / Minikube</h3>
         <p>Deployments, services, ingress, RBAC, network policies, EKS patterns — runs on Minikube locally.</p>
         <div class="drill-card-meta">
@@ -360,7 +364,7 @@
       </a>
 
       <a class="drill-card" href="https://github.com/energon-a-secas/local-drills/tree/main/gitlab" target="_blank" rel="noopener">
-        <div class="drill-card-icon" aria-hidden="true">🦊</div>
+        <div class="drill-card-icon"><img src="assets/icons/gitlab-svgrepo-com.svg" alt="GitLab"></div>
         <h3>GitLab CI/CD</h3>
         <p>Pipeline debugging, caching, artifacts, rules, and DAST — executed with gitlab-ci-local, no GitLab instance required.</p>
         <div class="drill-card-meta">
