@@ -1,0 +1,14 @@
+# ── Playwright MCP session data (screenshots and logs, not source code) ───────
+.playwright-mcp/
+
+# ── Node dependencies ─────────────────────────────────────────────────────────
+node_modules/
+
+# ── macOS metadata (binary, not useful to read) ───────────────────────────────
+.DS_Store
+
+# ── LocalStack / Docker volume data (runtime state, not source) ──────────────
+**/volume/*
+
+# ── gitlab-ci-local temp data ─────────────────────────────────────────────────
+**/.gitlab-ci-local/

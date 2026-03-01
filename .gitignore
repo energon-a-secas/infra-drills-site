@@ -1,3 +1,19 @@
+# ── macOS ─────────────────────────────────────────────────────────────────────
+.DS_Store
+
+# ── Playwright MCP (Claude Code browser automation — screenshots, logs) ───────
+.playwright-mcp/
+
+# ── Node (local tooling only — these projects have no npm dependencies) ───────
+node_modules/
+npm-debug.log*
+
+# ── Secrets — never commit ────────────────────────────────────────────────────
+.env
+.env.*
+
+# ── LocalStack / Docker volume data (runtime state, not source) ──────────────
 **/volume/*
+
+# ── gitlab-ci-local temp data ─────────────────────────────────────────────────
 **/.gitlab-ci-local/
-.playwright-mcp
