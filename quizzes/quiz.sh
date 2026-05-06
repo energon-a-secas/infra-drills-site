@@ -5,6 +5,11 @@ set -euo pipefail
 # Pure bash, no external dependencies (no yq, no jq)
 
 QUIZ_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+STATE_DIR="$HOME/.local-drills"
+STATE_FILE="$STATE_DIR/quiz-state.json"
+
+# Create state directory if it doesn't exist
+mkdir -p "$STATE_DIR"
 
 # Colors
 RED='\033[0;31m'
@@ -16,12 +21,100 @@ BOLD='\033[1m'
 DIM='\033[2m'
 RESET='\033[0m'
 
+# State management functions
+load_quiz_state() {
+    if [[ -f "$STATE_FILE" ]]; then
+        QUIZ_STATE=$(cat "$STATE_FILE" 2>/dev/null || echo "{}")
+    else
+        QUIZ_STATE="{}"
+    fi
+}
+
+save_quiz_state() {
+    echo "$QUIZ_STATE" > "$STATE_FILE"
+}
+
+get_question_state() {
+    local question_id="$1"
+    echo "$QUIZ_STATE" | grep -o "\"$question_id\":{[^}]*}" 2>/dev/null || echo ""
+}
+
+update_question_state() {
+    local question_id="$1"
+    local key="$2"
+    local value="$3"
+
+    if [[ -z "$QUIZ_STATE" || "$QUIZ_STATE" == "{}" ]]; then
+        QUIZ_STATE="{\"questions\":{}}"
+    fi
+
+    # Simple JSON manipulation (basic, works for our format)
+    if echo "$QUIZ_STATE" | grep -q "\"$question_id\""; then
+        # Update existing
+        QUIZ_STATE=$(echo "$QUIZ_STATE" | sed "s/\"$question_id\":{[^}]*}/\"$question_id\":{\"${key}\":\"${value}\", \"attempts\":$(get_attempt_count "$question_id")}/")
+    else
+        # Add new
+        QUIZ_STATE=$(echo "$QUIZ_STATE" | sed "s/\"questions\":{/\"questions\":{\"$question_id\":{\"${key}\":\"${value}\",\"attempts\":1},/")
+    fi
+}
+
+get_attempt_count() {
+    local question_id="$1"
+    local state=$(get_question_state "$question_id")
+    if [[ "$state" =~ \"attempts\":([0-9]+) ]]; then
+        echo "${BASH_REMATCH[1]}"
+    else
+        echo "0"
+    fi
+}
+
+should_show_explanation() {
+    if [[ "$HIDE_EXPLANATIONS" == "true" ]]; then
+        return 1  # false
+    elif [[ "$TEST_MODE" == "true" ]]; then
+        # Only show if question was answered correctly
+        local question_id="$1"
+        local state=$(get_question_state "$question_id")
+        if [[ "$state" =~ \"correct\":\"true\" ]]; then
+            return 0  # true
+        else
+            return 1  # false
+        fi
+    else
+        return 0  # true (show by default)
+    fi
+}
+
+get_hint_level() {
+    local question_id="$1"
+    local attempts=$(get_attempt_count "$question_id")
+
+    if [[ "$SHOW_HINTS" != "true" ]]; then
+        echo "0"
+        return
+    fi
+
+    if [[ $attempts -eq 0 ]]; then
+        echo "0"  # No hints on first attempt
+    elif [[ $attempts -eq 1 ]]; then
+        echo "1"  # Vague hint
+    elif [[ $attempts -ge 2 ]]; then
+        echo "2"  # Detailed hint
+    else
+        echo "0"
+    fi
+}
+
 # Defaults
 TOPIC=""
 SECTION=""
 DIFFICULTY=""
 COUNT=10
 ALL=false
+TEST_MODE=false
+HIDE_EXPLANATIONS=false
+MAX_ATTEMPTS=0  # 0 means unlimited
+SHOW_HINTS=false
 
 usage() {
     echo "Usage: quiz.sh [OPTIONS]"
@@ -33,6 +126,10 @@ usage() {
     echo "  --count N            Number of questions (default: 10)"
     echo "  --all                Run all matching questions in order"
     echo "  --list               List available topic packs"
+    echo "  --test-mode          Hide explanations until answered correctly"
+    echo "  --hide-explanations  Never show explanations (strict test mode)"
+    echo "  --max-attempts N     Limit attempts per question (0 = unlimited)"
+    echo "  --show-hints         Enable progressive hint system"
     echo "  -h, --help           Show this help"
     echo ""
     echo "Examples:"
@@ -41,6 +138,8 @@ usage() {
     echo "  quiz.sh --topic aws/s3-basics     # 10 random from S3 Basics pack"
     echo "  quiz.sh --topic aws/s3-basics --all  # All S3 Basics questions"
     echo "  quiz.sh --difficulty beginner --count 5"
+    echo "  quiz.sh --section aws --test-mode --max-attempts 3"
+    echo "  quiz.sh --topic aws/s3-basics --hide-explanations"
 }
 
 list_packs() {
@@ -69,6 +168,10 @@ while [[ $# -gt 0 ]]; do
         --count) COUNT="$2"; shift 2 ;;
         --all) ALL=true; shift ;;
         --list) list_packs; exit 0 ;;
+        --test-mode) TEST_MODE=true; shift ;;
+        --hide-explanations) HIDE_EXPLANATIONS=true; TEST_MODE=true; shift ;;
+        --max-attempts) MAX_ATTEMPTS="$2"; shift 2 ;;
+        --show-hints) SHOW_HINTS=true; shift ;;
         -h|--help) usage; exit 0 ;;
         *) echo "Unknown option: $1"; usage; exit 1 ;;
     esac
@@ -117,7 +220,7 @@ collect_files() {
 }
 
 # Parse all questions from a YAML file into arrays
-# Sets global arrays: Q_IDS, Q_TYPES, Q_PROMPTS, Q_OPTIONS_A..D, Q_ANSWERS, Q_ACCEPTS, Q_EXPLANATIONS
+# Sets global arrays: Q_IDS, Q_TYPES, Q_PROMPTS, Q_OPTIONS_A..D, Q_ANSWERS, Q_ACCEPTS, Q_EXPLANATIONS, Q_NEXT_IDS
 # For match: Q_LEFTS, Q_RIGHTS, Q_PAIRS
 parse_yaml() {
     local file="$1"
@@ -132,6 +235,7 @@ parse_yaml() {
     local current_opt_a="" current_opt_b="" current_opt_c="" current_opt_d=""
     local current_explanation="" current_accept=""
     local current_left="" current_right="" current_pairs=""
+    local current_next=""  # For chain questions
     local prompt_indent=0
 
     while IFS= read -r line || [[ -n "$line" ]]; do
@@ -152,12 +256,14 @@ parse_yaml() {
                 Q_LEFTS+=("$current_left")
                 Q_RIGHTS+=("$current_right")
                 Q_PAIRS+=("$current_pairs")
+                Q_NEXT_IDS+=("$current_next")
             fi
             current_id="${BASH_REMATCH[1]}"
             current_type="" current_prompt="" current_answer=""
             current_opt_a="" current_opt_b="" current_opt_c="" current_opt_d=""
             current_explanation="" current_accept=""
             current_left="" current_right="" current_pairs=""
+            current_next=""
             in_question=true in_prompt=false in_explanation=false
             in_accept=false in_left=false in_right=false in_pairs=false
             continue
@@ -170,6 +276,12 @@ parse_yaml() {
             current_type="${BASH_REMATCH[1]}"
             in_prompt=false; in_explanation=false; in_accept=false
             in_left=false; in_right=false; in_pairs=false
+            continue
+        fi
+        # Subtype (for extended types like scenario)
+        if [[ "$line" =~ ^[[:space:]]*subtype:[[:space:]]*(.*) ]]; then
+            local subtype="${BASH_REMATCH[1]}"
+            # Currently just store or ignore - could extend behavior per subtype
             continue
         fi
 
@@ -317,6 +429,14 @@ parse_yaml() {
             fi
         fi
 
+        # Next question (for chain type)
+        if [[ "$line" =~ ^[[:space:]]*next_question:[[:space:]]*(.*) ]]; then
+            local val="${BASH_REMATCH[1]}"
+            val="${val#\"}" ; val="${val%\"}" ; val="${val#'"}"; val="${val%'"}"
+            current_next="$val"
+            continue
+        fi
+
     done < "$file"
 
     # Save last question
@@ -334,6 +454,7 @@ parse_yaml() {
         Q_LEFTS+=("$current_left")
         Q_RIGHTS+=("$current_right")
         Q_PAIRS+=("$current_pairs")
+        Q_NEXT_IDS+=("$current_next")
     fi
 }
 
@@ -357,7 +478,27 @@ shuffle_indices() {
 # Run a diagnose question
 run_diagnose() {
     local idx=$1
-    echo -e "${CYAN}${BOLD}[DIAGNOSE]${RESET} ${DIM}(${Q_IDS[$idx]})${RESET}"
+    local question_id="${Q_IDS[$idx]}"
+    local attempts=0
+    local max_reached=false
+
+    # Load current state
+    attempts=$(get_attempt_count "$question_id")
+
+    # Store the question ID for display
+    local display_id="${Q_IDS[$idx]}"
+
+    echo -e "${CYAN}${BOLD}[DIAGNOSE]${RESET} ${DIM}[${display_id}]${RESET}"
+
+    # Show attempt info in test mode
+    if [[ "$TEST_MODE" == "true" && $attempts -gt 0 ]]; then
+        echo -e "${YELLOW}Attempt $(($attempts + 1))${RESET}"
+        if [[ $MAX_ATTEMPTS -gt 0 && $attempts -ge $MAX_ATTEMPTS ]]; then
+            echo -e "${RED}Maximum attempts reached. Moving on.${RESET}"
+            max_reached=true
+        fi
+    fi
+
     echo ""
     echo -e "${Q_PROMPTS[$idx]}"
     echo ""
@@ -366,12 +507,43 @@ run_diagnose() {
     echo -e "  ${BOLD}c)${RESET} ${Q_OPTIONS_C[$idx]}"
     echo -e "  ${BOLD}d)${RESET} ${Q_OPTIONS_D[$idx]}"
     echo ""
+
+    # Show hints if enabled and available
+    if [[ "$SHOW_HINTS" == "true" && "$max_reached" != "true" ]]; then
+        local hint_level=$(get_hint_level "$question_id")
+        if [[ $hint_level -gt 0 ]]; then
+            local hint_text=""
+            case $hint_level in
+                1) hint_text="Hint: Check the AWS documentation for this service." ;;
+                2) hint_text="Detailed hint: Look at IAM permissions and policy structure." ;;
+            esac
+            if [[ -n "$hint_text" ]]; then
+                echo -e "${DIM}$hint_text${RESET}"
+                echo ""
+            fi
+        fi
+    fi
+
+    if [[ "$max_reached" == "true" ]]; then
+        # Automatically mark as incorrect after max attempts
+        update_question_state "$question_id" "correct" "false"
+        save_quiz_state
+        return
+    fi
+
     read -rp "Your answer (a/b/c/d): " user_answer
     user_answer=$(echo "$user_answer" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
 
+    # Update attempt count
+    attempts=$(($attempts + 1))
+    update_question_state "$question_id" "attempts" "$attempts"
+
+    local correct=false
     if [[ "$user_answer" == "${Q_ANSWERS[$idx]}" ]]; then
         echo -e "${GREEN}${BOLD}Correct!${RESET}"
         SCORE=$((SCORE + 1))
+        correct=true
+        update_question_state "$question_id" "correct" "true"
     else
         local correct_text=""
         case "${Q_ANSWERS[$idx]}" in
@@ -381,7 +553,88 @@ run_diagnose() {
             d) correct_text="${Q_OPTIONS_D[$idx]}" ;;
         esac
         echo -e "${RED}${BOLD}Wrong.${RESET} The answer is: ${BOLD}${Q_ANSWERS[$idx]})${RESET} $correct_text"
+        update_question_state "$question_id" "correct" "false"
     fi
+
+    # Show explanation if allowed
+    if should_show_explanation "$question_id"; then
+        echo -e "${YELLOW}Explanation:${RESET} ${Q_EXPLANATIONS[$idx]}"
+    else
+        echo -e "${DIM}(Explanation hidden in test mode)${RESET}"
+    fi
+
+    save_quiz_state
+}
+
+# Run a scenario-based question (log analysis, error diagnosis)
+run_scenario() {
+    local idx=$1
+    local question_id="${Q_IDS[$idx]}"
+
+    echo -e "${CYAN}${BOLD}[SCENARIO]${RESET} ${DIM}(${question_id})${RESET}"
+    echo ""
+
+    # Display scenario (log snippet, error message, etc.)
+    echo -e "${Q_PROMPTS[$idx]}"
+    echo ""
+
+    # Show options if multiple choice, or prompt for input
+    if [[ -n "${Q_OPTIONS_A[$idx]}" && -n "${Q_OPTIONS_B[$idx]}" ]]; then
+        echo -e "  ${BOLD}a)${RESET} ${Q_OPTIONS_A[$idx]}"
+        echo -e "  ${BOLD}b)${RESET} ${Q_OPTIONS_B[$idx]}"
+        echo -e "  ${BOLD}c)${RESET} ${Q_OPTIONS_C[$idx]}"
+        echo -e "  ${BOLD}d)${RESET} ${Q_OPTIONS_D[$idx]}"
+        echo ""
+
+        read -rp "Your answer (a/b/c/d): " user_answer
+        user_answer=$(echo "$user_answer" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+
+        if [[ "$user_answer" == "${Q_ANSWERS[$idx]}" ]]; then
+            echo -e "${GREEN}${BOLD}Correct!${RESET}"
+            SCORE=$((SCORE + 1))
+        else
+            local correct_text=""
+            case "${Q_ANSWERS[$idx]}" in
+                a) correct_text="${Q_OPTIONS_A[$idx]}" ;;
+                b) correct_text="${Q_OPTIONS_B[$idx]}" ;;
+                c) correct_text="${Q_OPTIONS_C[$idx]}" ;;
+                d) correct_text="${Q_OPTIONS_D[$idx]}" ;;
+            esac
+            echo -e "${RED}${BOLD}Wrong.${RESET} The answer is: ${BOLD}${Q_ANSWERS[$idx]})${RESET} $correct_text"
+        fi
+    else
+        # Free-form answer for open-ended scenarios
+        read -rp "Your analysis: " user_answer
+        user_answer=$(echo "$user_answer" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+
+        # Check against primary answer and accept variants
+        local primary=$(echo "${Q_ANSWERS[$idx]}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+        local accept_list="${Q_ACCEPTS[$idx]}"
+
+        if [[ "$user_answer" == "$primary" ]]; then
+            echo -e "${GREEN}${BOLD}Correct!${RESET}"
+            SCORE=$((SCORE + 1))
+        elif [[ -n "${accept_list}" ]]; then
+            local correct=false
+            IFS=',' read -ra accepts <<< "$accept_list"
+            for acc in "${accepts[@]}"; do
+                local check_acc=$(echo "$acc" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+                if [[ "$user_answer" == "$check_acc" ]]; then
+                    correct=true
+                    break
+                fi
+            done
+            if [[ "$correct" == "true" ]]; then
+                echo -e "${GREEN}${BOLD}Correct!${RESET}"
+                SCORE=$((SCORE + 1))
+            else
+                echo -e "${RED}${BOLD}Wrong.${RESET} Expected: ${primary} (or variants: ${accept_list})"
+            fi
+        else
+            echo -e "${RED}${BOLD}Wrong.${RESET} Expected: ${primary}"
+        fi
+    fi
+
     echo -e "${YELLOW}Explanation:${RESET} ${Q_EXPLANATIONS[$idx]}"
 }
 
@@ -539,6 +792,10 @@ main() {
     Q_OPTIONS_A=() Q_OPTIONS_B=() Q_OPTIONS_C=() Q_OPTIONS_D=()
     Q_ANSWERS=() Q_ACCEPTS=() Q_EXPLANATIONS=()
     Q_LEFTS=() Q_RIGHTS=() Q_PAIRS=()
+    Q_NEXT_IDS=()
+
+    # Initialize state
+    load_quiz_state
 
     # Collect files
     mapfile -t quiz_files < <(collect_files)
@@ -575,6 +832,22 @@ main() {
 
     echo ""
     echo -e "${BOLD}Local Drills — Knowledge Check${RESET}"
+
+    # Show test mode indicators
+    if [[ "$HIDE_EXPLANATIONS" == "true" ]]; then
+        echo -e "${RED}STRICT TEST MODE${RESET} - Explanations hidden"
+    elif [[ "$TEST_MODE" == "true" ]]; then
+        echo -e "${YELLOW}TEST MODE${RESET}"
+    fi
+
+    if [[ $MAX_ATTEMPTS -gt 0 ]]; then
+        echo -e "${DIM}Maximum $MAX_ATTEMPTS attempts per question${RESET}"
+    fi
+
+    if [[ "$SHOW_HINTS" == "true" ]]; then
+        echo -e "${DIM}Hints enabled (progressive)${RESET}"
+    fi
+
     echo -e "${DIM}$run_count question(s) queued${RESET}"
     echo -e "${DIM}──────────────────────────────${RESET}"
 
@@ -589,6 +862,8 @@ main() {
             diagnose) run_diagnose "$idx" ;;
             complete) run_complete "$idx" ;;
             match)    run_match "$idx" ;;
+            scenario) run_scenario "$idx" ;;
+            chain)    run_chain "$idx" ;;
             *) echo "Unknown question type: ${Q_TYPES[$idx]}"; continue ;;
         esac
     done
@@ -619,6 +894,100 @@ main() {
     else
         echo -e "${RED}Keep studying — you'll get there.${RESET}"
     fi
+
+# Run a chain question (multi-step reasoning)
+run_chain() {
+    local idx=$1
+    local question_id="${Q_IDS[$idx]}"
+    local current_idx=$idx
+    local step=1
+    local all_correct=true
+
+    # Walk through the chain
+    while [[ $current_idx -ne -1 ]]; do
+        local step_id="${Q_IDS[$current_idx]}"
+
+        echo -e "${BLUE}${BOLD}[CHAIN Step $step]${RESET} ${DIM}(${step_id})${RESET}"
+        echo ""
+        echo -e "${Q_PROMPTS[$current_idx]}"
+        echo ""
+
+        # Check if this is multiple choice or free-form
+        if [[ -n "${Q_OPTIONS_A[$current_idx]}" ]]; then
+            echo -e "  ${BOLD}a)${RESET} ${Q_OPTIONS_A[$current_idx]}"
+            echo -e "  ${BOLD}b)${RESET} ${Q_OPTIONS_B[$current_idx]}"
+            echo -e "  ${BOLD}c)${RESET} ${Q_OPTIONS_C[$current_idx]}"
+            echo -e "  ${BOLD}d)${RESET} ${Q_OPTIONS_D[$current_idx]}"
+            echo ""
+            read -rp "Your answer: " user_answer
+            user_answer=$(echo "$user_answer" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+        else
+            read -rp "Your answer: " user_answer
+            user_answer=$(echo "$user_answer" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+        fi
+
+        # Check answer
+        local correct_answer=$(echo "${Q_ANSWERS[$current_idx]}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+        local user_clean=$(echo "$user_answer" | tr -d '[:space:]')
+
+        if [[ "$user_clean" == "$correct_answer" ]]; then
+            echo -e "${GREEN}${BOLD}Correct!${RESET}"
+            echo ""
+
+            # Show follow-up if from chain (suppress empty)
+            if [[ ${#Q_EXPLANATIONS[$current_idx]} -gt 10 ]]; then
+                echo -e "${DIM}${Q_EXPLANATIONS[$current_idx]}${RESET}"
+                echo ""
+            fi
+
+            SCORE=$((SCORE + 1))
+        else
+            echo -e "${RED}${BOLD}Wrong.${RESET}"
+            all_correct=false
+            # Show explanation
+            echo -e "${DIM}${Q_EXPLANATIONS[$current_idx]}${RESET}"
+            echo ""
+
+            # Don't proceed to next step if wrong
+            echo -e "${RED}Chain broken. Review and restart.${RESET}"
+            return
+        fi
+
+        # Find next question in chain (if any)
+        local next_id="${Q_NEXT_IDS[$current_idx]:-}"
+        if [[ "$next_id" == "null" || -z "$next_id" ]]; then
+            break
+        fi
+
+        # Find index of next question
+        local next_idx=-1
+        for ((i=0; i<${#Q_IDS[@]}; i++)); do
+            if [[ "${Q_IDS[$i]}" == "$next_id" ]]; then
+                next_idx=$i
+                break
+            fi
+        done
+
+        if [[ $next_idx -eq -1 ]]; then
+            echo -e "${RED}Error:${RESET} Next question in chain not found: $next_id"
+            return
+        fi
+
+        current_idx=$next_idx
+        step=$((step + 1))
+    done
+
+    if [[ "$all_correct" == "true" ]]; then
+        echo -e "${GREEN}Chain completed successfully!${RESET}"
+    fi
+}
+
+# Show test mode completion message
+    if [[ "$TEST_MODE" == "true" ]]; then
+        echo ""
+        echo -e "${DIM}Test mode complete. Review your answers and study the explanations.${RESET}"
+    fi
+
     echo ""
 }
 

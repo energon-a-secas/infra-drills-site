@@ -1,7 +1,7 @@
 REQUIRED_TOOLS := aws curl jq docker
 BREW_TOOLS := aws jq
 
-.PHONY: check-requirements install-tools new-drill list-drills list-incomplete build-site quiz quiz-aws quiz-k8s quiz-gitlab
+.PHONY: check-requirements install-tools new-drill list-drills list-incomplete build-site quiz quiz-aws quiz-k8s quiz-gitlab test-dry-run test-mode-validate test-mode-reset
 
 check-requirements:
 	@echo "Checking for required tools..."
@@ -48,3 +48,39 @@ quiz-k8s:
 
 quiz-gitlab:
 	@bash quizzes/quiz.sh --section gitlab
+
+# Test Mode Targets
+test-dry-run:
+	@echo "Test mode dry run - checking which drills can be tested:"
+	@echo ""
+	@for section in aws kubernetes gitlab; do \
+		echo "$$section/ drills:"; \
+		find $$section -name "README.md" -type f | wc -l | xargs echo "  Total drills:"; \
+		echo ""; \
+	done
+
+test-mode-enter: ## Enter test mode for a specific drill
+	@echo "Enter test mode for a drill"
+	@echo "Usage: make test-mode-enter DRILL=aws/s3-01-bucket-does-not-appear"
+	@echo ""
+	@if [ -z "$(DRILL)" ]; then \
+		echo "Error: DRILL parameter required"; \
+		echo "Example: make test-mode-enter DRILL=aws/s3-01-bucket-does-not-appear"; \
+		exit 1; \
+	fi
+	@bash scripts/test-mode-wrapper.sh $(DRILL)
+
+test-mode-validate:
+	@echo "Test mode validation"
+	@echo "Usage: make test-mode-validate DRILL=path/to/drill"
+	@echo ""
+	@if [ -z "$(DRILL)" ]; then \
+		echo "Error: DRILL parameter required"; \
+		echo "Run: make test-mode-validate DRILL=aws/s3-01-bucket-does-not-appear"; \
+		exit 1; \
+	fi
+	@bash scripts/solution-gate.sh $(DRILL)
+
+test-mode-reset:
+	@bash scripts/test-mode-wrapper.sh --reset
+	@echo "Test mode state has been reset. All solutions are now visible."
