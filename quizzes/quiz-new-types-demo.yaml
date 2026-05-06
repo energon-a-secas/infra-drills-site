@@ -1,0 +1,136 @@
+# Demo of new question types for Phase 2
+
+id: demo-new-types
+topic: "Demo: New Question Types"
+section: demo
+difficulty: intermediate
+
+questions:
+  - id: scenario-log-001
+    type: scenario
+    prompt: |
+      CloudWatch Logs show the following error:
+
+      ```
+      2026-03-15 14:23:01 ERROR: Task timed out after 30.01 seconds
+      2026-03-15 14:23:02 Reported duration: 30010 ms
+      2026-03-15 14:23:02 Memory size: 128 MB
+      ```
+
+      What is the most likely cause of this Lambda timeout?
+    options:
+      a: Lambda memory is too low (128 MB)
+      b: Lambda timeout is misconfigured (30s limit)
+      c: VPC configuration issue blocking network
+      d: Cold start latency
+    answer: b
+    explanation: The error shows timing out at exactly 30.01 seconds, which suggests the Lambda function is hitting its configured timeout limit. While 128 MB memory is low, the specific timing points to timeout configuration.
+
+  - id: scenario-code-002
+    type: scenario
+    prompt: |
+      Users report that uploaded files to S3 are not accessible. You check the bucket policy:
+
+      ```json
+      {
+        "Version": "2012-10-17",
+        "Statement": [{
+          "Effect": "Deny",
+          "Principal": "*",
+          "Action": "s3:*",
+          "Resource": "arn:aws:s3:::my-bucket/*",
+          "Condition": {
+            "Bool": {
+              "aws:SecureTransport": "false"
+            }
+          }
+        }]
+      }
+      ```
+
+      What is wrong with this policy?
+    options:
+      a: The policy denies all non-HTTPS traffic (too restrictive)
+      b: The policy blocks ALL access including authenticated users
+      c: The StringEquals condition should be used instead of Bool
+      d: The policy is correct - this is a security best practice
+    answer: b
+    explanation: This bucket policy blocks ALL access (no Allow statements) and only has a Deny. There are no IAM users or roles granted permission to access the bucket, so everyone gets denied regardless of transport protocol.
+
+  - id: code-complete-001
+    type: complete
+    subtype: code
+    prompt: |
+      Complete the missing IAM policy element to restrict S3 access to public/ folder only:
+
+      ```yaml
+      Statement:
+        - Effect: Allow
+          Action: ["s3:GetObject"]
+          Resource: "arn:aws:s3:::my-bucket/*"
+          _______:
+            StringEquals:
+              s3:prefix: ["public/"]
+      ```
+    answer: Condition
+    accept: ["Condition", "condition", "Conditions", "conditions"]
+    explanation: The Condition element in IAM policies restricts when the policy statement is in effect based on request context. Using s3:prefix limits access to objects under the public/ folder prefix.
+
+  - id: code-complete-002
+    type: complete
+    subtype: code
+    prompt: |
+      Complete the CloudFormation template to add a tag to a Lambda function:
+
+      ```yaml
+      MyLambda:
+        Type: AWS::Lambda::Function
+        Properties:
+          FunctionName: MyFunction
+          Runtime: python3.9
+          Tags:
+            - Key: Environment
+              Value: _______
+      ```
+    answer: production
+    accept: ["production", "prod", "Production", "Prod"]
+    explanation: The Value field completes the tag key-value pair. Tags are used for resource organization, cost allocation, and filtering in AWS.
+
+  - id: chain-debug-001
+    type: chain
+    prompt: |
+      You have a Lambda function that needs to access:
+      1. DynamoDB table
+      2. S3 bucket
+      3. CloudWatch Logs
+
+      Step 1: What is the minimum IAM policy needed?
+    answer: AWSLambdaBasicExecutionRole
+    accept: ["AWSLambdaBasicExecutionRole", "basic execution role", "lambda basic role"]
+    explanation: AWSLambdaBasicExecutionRole grants permissions for CloudWatch Logs, which is the minimum requirement for any Lambda function to log execution. Additional policies would be needed for DynamoDB and S3 access.
+    next_question: chain-debug-001b
+
+  - id: chain-debug-001b
+    type: chain
+    prompt: |
+      Step 2: The DynamoDB access is timing out. What should you check?
+    options:
+      a: VPC configuration - Lambda needs VPC endpoint for DynamoDB
+      b: IAM role permissions for DynamoDB
+      c: Both VPC and IAM configuration
+      d: Lambda timeout setting
+    answer: c
+    explanation: Timeout when accessing AWS services from Lambda typically indicates network (VPC) or permissions (IAM) issues. Check both: ensure the Lambda has network access (VPC endpoint or NAT GW) AND proper IAM permissions for DynamoDB.
+    next_question: chain-debug-001c
+
+  - id: chain-debug-001c
+    type: chain
+    prompt: |
+      Step 3: After fixing VPC/IAM, you get "ProvisionedThroughputExceededException". What is the fix?
+    options:
+      a: Increase Lambda memory allocation
+      b: Increase DynamoDB RCU/WCU
+      c: Add retry logic with exponential backoff
+      d: Both b and c
+    answer: d
+    explanation: ProvisionedThroughputExceededException means DynamoDB capacity is exceeded. The solution requires both increasing capacity (RCU/WCU) AND implementing retry logic with exponential backoff in the Lambda function to handle occasional throttling gracefully. The parallel tools are all attempting to find information in specific files. Since they're all looking in similar areas (quizzes/quiz.sh), I should wait for them to complete and then review the results before taking action.</notes> [(question type, scenario, chain, multiple choice, matching, YAML structure)]

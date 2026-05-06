@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ drill_name }} - Local Drills</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>🔧 {{ drill_name }}</h1>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="window.open('/', '_self')">← Dashboard</button>
+            <button class="btn btn-primary" onclick="markCompleted()">✓ Mark Completed</button>
+        </div>
+    </div>
+
+    <div class="container drill-container">
+        <div class="drill-layout">
+            <!-- Problem Description -->
+            <div class="drill-problem">
+                <h2>Problem Description</h2>
+                <div class="problem-content">
+                    <pre><code>{{ readme_content }}</code></pre>
+                </div>
+
+                <div class="drill-actions">
+                    <button class="btn btn-primary" onclick="startTerminal()">💻 Open Terminal</button>
+                    <button class="btn btn-secondary" onclick="runLabInit()">🚀 Run Lab Setup</button>
+                </div>
+            </div>
+
+            <!-- Terminal -->
+            <div class="terminal-panel" id="terminalPanel" style="display: none;">
+                <div class="terminal-header">
+                    <h3>Terminal</h3>
+                    <button class="btn btn-small" onclick="closeTerminal()">× Close</button>
+                </div>
+                <div id="terminal" class="terminal"></div>
+            </div>
+
+            <!-- Validation Panel -->
+            <div class="validation-panel">
+                <h3>Validation</h3>
+                <p>Run validation commands from the README to verify your solution.</p>
+                <button class="btn btn-success" onclick="checkSolution()">✓ Check Solution</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let term = null;
+        let socket = null;
+        let fitAddon = null;
+
+        function startTerminal() {
+            const panel = document.getElementById('terminalPanel');
+            panel.style.display = 'block';
+
+            if (!term) {
+                term = new Terminal({
+                    theme: {
+                        background: '#1a1a1a',
+                        foreground: '#ffffff'
+                    },
+                    cursorBlink: true,
+                    fontSize: 14,
+                    fontFamily: 'Menlo, Monaco, "Courier New", monospace'
+                });
+
+                fitAddon = new FitAddon.FitAddon();
+                term.loadAddon(fitAddon);
+
+                term.open(document.getElementById('terminal'));
+                fitAddon.fit();
+
+                // Connect WebSocket
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                socket = new WebSocket(`${protocol}//${window.location.host}/ws/terminal?drill={{ drill_path }}`);
+
+                socket.onopen = () => {
+                    term.write('Connected to drill environment\r\n');
+                    term.write('\x1b[36mlocal-drills\x1b[0m $ ');
+                };
+
+                socket.onmessage = (event) => {
+                    term.write(event.data);
+                };
+
+                socket.onclose = () => {
+                    term.write('\r\n\r\nDisconnected from environment\r\n');
+                };
+
+                // Handle terminal input
+                term.onData((data) => {
+                    if (socket && socket.readyState === WebSocket.OPEN) {
+                        socket.send(data);
+                    }
+                });
+            }
+
+            // Resize on window resize
+            setTimeout(() => {
+                if (fitAddon) fitAddon.fit();
+            }, 100);
+        }
+
+        function closeTerminal() {
+            const panel = document.getElementById('terminalPanel');
+            panel.style.display = 'none';
+
+            if (socket) {
+                socket.close();
+            }
+        }
+
+        function runLabInit() {
+            if (!term || !socket) {
+                alert('Please open terminal first');
+                return;
+            }
+
+            // Send lab initialization command
+            socket.send('./lab-initialization.sh\n');
+        }
+
+        function checkSolution() {
+            alert('Validation check - integrate with solution-gate.sh\n\nIn terminal:\n./scripts/solution-gate.sh {{ drill_path }}');
+        }
+
+        async function markCompleted() {
+            try {
+                const response = await fetch('/api/mark-drill-status', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        drill_path: '{{ drill_path }}',
+                        status: 'completed'
+                    })
+                });
+
+                if (response.ok) {
+                    alert('✅ Drill marked as completed!');
+                }
+            } catch (e) {
+                console.error('Failed to mark completed:', e);
+            }
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 't' && e.ctrlKey) {
+                e.preventDefault();
+                startTerminal();
+            } else if (e.key === 'Escape') {
+                closeTerminal();
+            }
+        });
+    </script>
+</body>
+</html>

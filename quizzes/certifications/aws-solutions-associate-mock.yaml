@@ -1,0 +1,83 @@
+id: aws-solutions-associate-mock
+type: certification
+description: AWS Certified Solutions Architect - Associate Mock Exam
+section: aws
+sub_section: certification
+
+# Test Configuration
+duration: 130  # minutes - actual exam duration
+passing_score: 72  # percent - actual passing score
+question_count: 65  # actual exam question count
+
+# Question Distribution
+sections:
+  aws_solutions: 30%      # 19-20 questions - Design Resilient Architectures
+  aws_security: 24%       # 15-16 questions - Design Secure Applications
+  aws_cost_optimization: 18%  # 11-12 questions - Design Cost-Optimized Architectures
+  aws_performance: 14%    # 9 questions - Design High-Performing Architectures
+  aws_operational: 14%    # 9 questions - Design Operationally Excellent Architectures
+
+# Mock Questions - Sample (in real implementation, source from full question bank)
+questions:
+  - id: cert-sa-01
+    type: scenario
+    difficulty: intermediate
+    section: aws_solutions
+    prompt: |
+      A company's application runs on Amazon EC2 instances behind an Application Load Balancer.
+      The instances run in an Auto Scaling group across multiple Availability Zones.
+      The application stores data in an Amazon RDS MySQL database instance.
+
+      The application experiences performance issues during periods of high traffic.
+      Analysis shows that the database is the bottleneck. Which solution will improve database performance?
+    options:
+      a: Migrate the database to a Multi-AZ deployment
+      b: Implement Amazon ElastiCache for caching frequently accessed data
+      c: Increase the instance size of the EC2 instances
+      d: Enable S3 Transfer Acceleration
+    answer: b
+    explanation: ElastiCache provides in-memory caching to reduce database load, improving performance for read-heavy workloads by serving frequently accessed data from cache instead of the database.
+
+  - id: cert-sa-02
+    type: scenario
+    difficulty: intermediate
+    section: aws_security
+    prompt: |
+      A solutions architect needs to design a secure way for users to access an application running on EC2 instances.
+      The users are remote employees with dynamic IP addresses. Which approach provides the most secure access?
+    options:
+      a: Create security group rules allowing inbound access from 0.0.0.0/0
+      b: Implement AWS Client VPN for secure remote access
+      c: Use security group rules with each employee's current IP address
+      d: Place the instances behind a CloudFront distribution
+    answer: b
+    explanation: AWS Client VPN provides secure, managed access for remote users. It uses OpenVPN protocol, integrates with AD/LDAP, and provides audit logging - much more secure than static IP rules or open access.
+
+  - id: cert-sa-03
+    type: chain
+    difficulty: advanced
+    section: aws_solutions
+    prompt: |
+      You need to design a serverless web application. Step 1: Which service should handle the web frontend?
+    options:
+      a: Amazon S3 static website hosting
+      b: Amazon EC2 with web server
+      c: AWS Lambda
+      d: Amazon RDS
+    answer: a
+    explanation: Amazon S3 static website hosting is the most cost-effective and scalable solution for hosting static web content like HTML, CSS, and JavaScript.
+    next_question: cert-sa-03b
+
+  - id: cert-sa-03b
+    type: chain
+    difficulty: advanced
+    section: aws_solutions
+    prompt: |
+      Step 2: The frontend needs to call backend APIs. Which service should host the backend logic?
+    options:
+      a: Amazon EC2 instances
+      b: AWS Lambda functions with API Gateway
+      c: Amazon RDS database
+      d: Amazon ECS containers
+    answer: b
+    explanation: Lambda functions with API Gateway provide a true serverless backend - no server management, automatic scaling, and pay-per-request pricing. Perfect for variable web traffic.
