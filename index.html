@@ -3,8 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-Frame-Options" content="DENY">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://pub-b597cd281a384f98a47e1f043a6c4160.r2.dev; frame-ancestors 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://plausible.io; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://pub-b597cd281a384f98a47e1f043a6c4160.r2.dev; connect-src 'self' https://plausible.io; frame-ancestors 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <!-- Privacy-first analytics -->
+  <script defer data-domain="infradrills.neorgon.com" src="https://plausible.io/js/script.js"></script>
   <title>Infra Drills | Break-Fix Challenges</title>
   <meta name="description" content="Real-world AWS, Kubernetes, and GitLab CI/CD break-fix challenges that run entirely on your machine. Zero cloud costs, no signup">
   <meta property="og:title" content="Infra Drills: Cloud Break-Fix Challenges">
