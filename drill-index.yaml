@@ -422,3 +422,48 @@ drills:
     prerequisites: [gitlab-01-cache-not-shared]
     description: >
       Ticket: Pipeline went from 2 to 12 minutes after cleanup MR. Cache key changed to $CI_PIPELINE_ID.
+
+  # ── Strategy-focused triage (Troubleshooting Framework) ──
+  - name: triage-10-crashloop-one-environment
+    section: triage
+    service: k8s
+    difficulty: intermediate
+    tags: [comparison, configmap, namespaces, crashloopbackoff, environment-diff, incident-response]
+    status: complete
+    prerequisites: [k8s-03-configmap-mount-failure]
+    strategy: comparison
+    description: >
+      Ticket: Same deployment runs in staging but CrashLoopBackOff in production. "Same YAML." A ConfigMap key typo differs only between namespaces — diff the two environments to find it.
+
+  - name: triage-11-everything-broke-at-once
+    section: triage
+    service: gitlab
+    difficulty: intermediate
+    tags: [rule-out, discard, extends, shared-config, before-script, incident-response]
+    status: complete
+    prerequisites: [gitlab-00-tutorial]
+    strategy: rule-out
+    description: >
+      Ticket: lint, test, and build all fail at once after a cleanup MR added a shared before_script. Rule out the individual jobs and isolate the one shared block they inherit.
+
+  - name: triage-12-config-assumed-updated
+    section: triage
+    service: aws
+    difficulty: intermediate
+    tags: [verify-assumptions, ssm, parameter-store, stale-config, incident-response]
+    status: complete
+    prerequisites: []
+    strategy: verify-assumptions
+    description: >
+      Ticket: Service still hits the old endpoint after "the config was updated". The SSM update hit a typo'd parameter path — verify the value the app actually reads instead of trusting the report.
+
+  - name: triage-13-find-the-bad-entry
+    section: triage
+    service: gitlab
+    difficulty: intermediate
+    tags: [bisect, validation, json, config-registry, incident-response]
+    status: complete
+    prerequisites: [gitlab-00-tutorial]
+    strategy: bisect
+    description: >
+      Ticket: A 24-entry service registry fails validation with a vague, location-less error. Bisect the file to localize the one out-of-range entry in ~5 checks instead of reading all 24.

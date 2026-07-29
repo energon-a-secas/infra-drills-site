@@ -1,0 +1,38 @@
+# The "cleanup" MR replaced three duplicated before_script blocks with one
+# shared .setup job that every job now extends. The intent was good — stop
+# repeating setup. But the shared script calls a tool the runner image does
+# not have, so all three jobs fail in setup, before their real work runs.
+#
+# The failure is shared, so the cause is shared. Find the one block they all
+# inherit and rule out the individual jobs.
+
+stages:
+  - lint
+  - test
+  - build
+
+.setup:
+  image: node:20-alpine
+  before_script:
+    - sh ./scripts/ci-setup.sh
+
+lint:
+  extends: .setup
+  stage: lint
+  script:
+    - echo "Running linter..."
+    - node -e "console.log('lint clean')"
+
+test:
+  extends: .setup
+  stage: test
+  script:
+    - echo "Running tests..."
+    - node -e "console.log('all tests passed')"
+
+build:
+  extends: .setup
+  stage: build
+  script:
+    - echo "Building artifact..."
+    - node -e "console.log('build complete')"

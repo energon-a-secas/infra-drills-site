@@ -1,0 +1,122 @@
+[
+  {
+    "name": "auth",
+    "port": 8000,
+    "weight": 1
+  },
+  {
+    "name": "billing",
+    "port": 8001,
+    "weight": 1.5
+  },
+  {
+    "name": "catalog",
+    "port": 8002,
+    "weight": 2
+  },
+  {
+    "name": "checkout",
+    "port": 8003,
+    "weight": 2.5
+  },
+  {
+    "name": "delivery",
+    "port": 8004,
+    "weight": 3
+  },
+  {
+    "name": "email",
+    "port": 8005,
+    "weight": 1
+  },
+  {
+    "name": "fraud",
+    "port": 8006,
+    "weight": 1.5
+  },
+  {
+    "name": "gateway",
+    "port": 8007,
+    "weight": 2
+  },
+  {
+    "name": "inventory",
+    "port": 8008,
+    "weight": 2.5
+  },
+  {
+    "name": "invoices",
+    "port": 8009,
+    "weight": 3
+  },
+  {
+    "name": "loyalty",
+    "port": 8010,
+    "weight": 1
+  },
+  {
+    "name": "notifications",
+    "port": 8011,
+    "weight": 1.5
+  },
+  {
+    "name": "orders",
+    "port": 8012,
+    "weight": 2
+  },
+  {
+    "name": "payments",
+    "port": 8013,
+    "weight": 2.5
+  },
+  {
+    "name": "pricing",
+    "port": 8014,
+    "weight": 3
+  },
+  {
+    "name": "profiles",
+    "port": 8015,
+    "weight": 1
+  },
+  {
+    "name": "recommendations",
+    "port": 70000,
+    "weight": 1.5
+  },
+  {
+    "name": "reports",
+    "port": 8017,
+    "weight": 2
+  },
+  {
+    "name": "reviews",
+    "port": 8018,
+    "weight": 2.5
+  },
+  {
+    "name": "search",
+    "port": 8019,
+    "weight": 3
+  },
+  {
+    "name": "sessions",
+    "port": 8020,
+    "weight": 1
+  },
+  {
+    "name": "shipping",
+    "port": 8021,
+    "weight": 1.5
+  },
+  {
+    "name": "tax",
+    "port": 8022,
+    "weight": 2
+  },
+  {
+    "name": "wishlist",
+    "port": 8023,
+    "weight": 2.5
+  }
+]

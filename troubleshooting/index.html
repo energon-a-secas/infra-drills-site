@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://plausible.io; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://pub-b597cd281a384f98a47e1f043a6c4160.r2.dev; connect-src 'self' https://plausible.io; frame-ancestors 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <script defer data-domain="infradrills.neorgon.com" src="https://plausible.io/js/script.js"></script>
+  <title>Troubleshooting Framework | Infra Drills</title>
+  <meta name="description" content="A field-tested framework for troubleshooting infrastructure incidents under pressure. Match the scenario to the strategy — comparison, discarding, time correlation, rollback — and tie it to hands-on drills.">
+  <meta property="og:title" content="The Troubleshooting Framework — Infra Drills">
+  <meta property="og:description" content="Match the scenario to the strategy. A field-tested method for debugging AWS, Kubernetes, and GitLab incidents under pressure.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://infradrills.neorgon.com/troubleshooting/">
+  <meta property="og:site_name" content="Neorgon">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="The Troubleshooting Framework — Infra Drills">
+  <meta name="twitter:description" content="Match the scenario to the strategy. A field-tested method for debugging incidents under pressure.">
+  <meta name="twitter:image" content="https://infradrills.neorgon.com/og-preview.jpg">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://infradrills.neorgon.com/troubleshooting/">
+  <meta property="og:locale" content="en_US">
+  <meta name="theme-color" content="#040714">
+  <meta property="og:image" content="https://infradrills.neorgon.com/og-preview.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <link rel="icon" type="image/x-icon" href="https://pub-b597cd281a384f98a47e1f043a6c4160.r2.dev/v1.0.0/favicon.ico" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "The Troubleshooting Framework",
+    "description": "A field-tested framework for troubleshooting infrastructure incidents: match the scenario to the strategy.",
+    "url": "https://infradrills.neorgon.com/troubleshooting/",
+    "author": { "@type": "Organization", "name": "Neorgon", "url": "https://neorgon.com/" },
+    "publisher": { "@type": "Organization", "name": "Neorgon", "url": "https://neorgon.com/" }
+  }
+  </script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #040714;
+      --surface-1: rgba(255,255,255,.03);
+      --surface-2: rgba(255,255,255,.06);
+      --border-subtle: rgba(255,255,255,.07);
+      --border: rgba(255,255,255,.1);
+      --border-strong: rgba(255,255,255,.22);
+      --text-primary: #f9f9f9;
+      --text-secondary: #cacaca;
+      --text-muted: rgba(255,255,255,.55);
+      --accent: #0063e5;
+      --accent-bright: #0080ff;
+      --font: 'Avenir Next', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      --mono: 'SF Mono', 'Fira Code', ui-monospace, Menlo, monospace;
+      --text-xs: 0.75rem; --text-sm: 0.875rem; --text-base: 1rem;
+      --text-lg: 1.125rem; --text-xl: 1.25rem; --text-2xl: 1.5rem;
+      --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+      --space-6: 24px; --space-8: 32px;
+      --radius-sm: 6px; --radius: 10px; --radius-lg: 15px;
+      --ease-snap: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --dur-fast: 120ms; --dur: 200ms;
+      /* Phase ramp — one analogous sweep through the brand's magenta→indigo→blue arc.
+         Sequential, low-chroma, dark-bg legible. Reads as a considered system, not a rainbow. */
+      --p-assess:     oklch(0.81 0.105 352);
+      --p-orient:     oklch(0.81 0.105 330);
+      --p-isolate:    oklch(0.80 0.110 305);
+      --p-understand: oklch(0.80 0.115 288);
+      --p-resolve:    oklch(0.80 0.115 268);
+      --p-learn:      oklch(0.81 0.110 250);
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      min-height: 100vh;
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ── */
+    .header-bar {
+      background: linear-gradient(in oklch 135deg, #B015B0 0%, #3D0080 50%, #040714 100%);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 0 24px;
+      height: 68px;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+    }
+    .header-logo { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .header-logo-img {
+      height: 36px; width: auto; flex-shrink: 0;
+      filter: brightness(0) invert(1);
+      transition: transform 0.3s var(--ease-snap);
+      display: block;
+    }
+    .header-logo-img:hover { transform: scale(1.14) rotate(-9deg); }
+    .header-logo h1 { font-size: 1.2em; font-weight: 600; color: var(--text-primary); letter-spacing: .5px; }
+    .header-subtitle { font-size: .82em; color: rgba(255,255,255,.72); font-weight: 500; margin-top: 3px; }
+    .header-title-link { text-decoration: none; color: inherit; }
+    .header-nav {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .header-nav a {
+      color: rgba(255,255,255,.85);
+      text-decoration: none;
+      font-size: var(--text-sm);
+      font-weight: 500;
+      padding: 7px 12px;
+      border-radius: var(--radius-sm);
+      transition: color var(--dur), background var(--dur);
+    }
+    .header-nav a:hover { color: #fff; background: rgba(255,255,255,.12); }
+    .header-home {
+      display: flex; align-items: center;
+      padding: 5px;
+      color: rgba(255,255,255,0.9); text-decoration: none;
+      border-radius: var(--radius-sm);
+      transition: color var(--dur), background var(--dur); flex-shrink: 0;
+    }
+    .header-home:hover { color: #fff; background: rgba(255,255,255,0.12); }
+    .header-home svg { width: 34px; height: 34px; display: block; }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 940px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 24px 30px;
+      flex: 1;
+    }
+
+    /* ── Hero ── */
+    .hero { text-align: center; padding: 60px 0 36px; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 20px;
+      background: rgba(0,99,229,.15); border: 1px solid rgba(0,99,229,.3);
+      color: #60a5fa; font-size: var(--text-xs); font-weight: 600;
+      letter-spacing: .06em; text-transform: uppercase; margin-bottom: 20px;
+    }
+    .hero h2 {
+      font-size: clamp(1.9rem, 5vw, 2.9rem);
+      font-weight: 700; line-height: 1.15;
+      color: var(--text-primary); margin-bottom: 18px;
+    }
+    .hero h2 span { color: #a78bfa; }
+    .hero p {
+      font-size: var(--text-lg); color: var(--text-secondary);
+      max-width: 620px; margin: 0 auto; line-height: 1.7;
+    }
+
+    /* ── Section heading ── */
+    .section-heading {
+      font-size: var(--text-xs); font-weight: 600;
+      letter-spacing: .1em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 8px; padding-top: 56px;
+    }
+    .section-lead {
+      font-size: var(--text-base); color: var(--text-secondary);
+      line-height: 1.65; margin-bottom: 22px; max-width: 640px;
+    }
+    .section-lead strong { color: var(--text-primary); font-weight: 600; }
+
+    /* ── The Loop (phase stepper) ── */
+    .loop {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    .loop-stage {
+      position: relative;
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 18px 16px;
+      transition: border-color var(--dur), background var(--dur), transform var(--dur);
+    }
+    .loop-stage:hover { background: var(--surface-2); border-color: var(--border-strong); transform: translateY(-2px); }
+    .loop-stage .step-n {
+      display: inline-flex; align-items: center; gap: 7px;
+      font-family: var(--mono); font-size: var(--text-xs);
+      color: var(--text-muted); font-weight: 700; letter-spacing: .04em;
+    }
+    .loop-stage .step-n::before {
+      content: ''; width: 7px; height: 7px; border-radius: 50%;
+      background: var(--stage-accent); flex-shrink: 0;
+    }
+    .loop-stage h3 { font-size: var(--text-base); font-weight: 600; margin: 8px 0 6px; color: var(--text-primary); }
+    .loop-stage p { font-size: var(--text-sm); color: var(--text-secondary); line-height: 1.55; }
+    .loop-stage .stage-q {
+      display: block; margin-top: 10px; font-size: var(--text-xs);
+      color: var(--text-muted); font-style: italic;
+    }
+
+    /* ── Scenario matcher ── */
+    .matcher-intro { margin-bottom: 18px; }
+    .scenario-chips {
+      display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px;
+    }
+    .scenario-chip {
+      font-family: var(--font);
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      color: var(--text-secondary);
+      font-size: var(--text-sm); font-weight: 500;
+      padding: 9px 16px; cursor: pointer;
+      transition: all var(--dur);
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .scenario-chip:hover { border-color: var(--border-strong); background: var(--surface-2); color: var(--text-primary); }
+    .scenario-chip.active {
+      background: rgba(0,99,229,.16); border-color: rgba(0,128,255,.55);
+      color: #cfe4ff;
+    }
+    .scenario-chip .chip-quote { opacity: .55; font-style: italic; }
+
+    .matcher-panel {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 26px 28px;
+      animation: fadeIn var(--dur) ease;
+      min-height: 120px;
+    }
+    .matcher-empty { color: var(--text-muted); font-size: var(--text-base); line-height: 1.6; }
+    .matcher-empty strong { color: var(--text-secondary); }
+    .matcher-panel .m-symptom {
+      font-size: var(--text-xl); font-weight: 700; color: var(--text-primary);
+      margin-bottom: 6px; line-height: 1.3;
+    }
+    .matcher-panel .m-diagnosis { font-size: var(--text-sm); color: var(--text-secondary); line-height: 1.65; margin-bottom: 20px; }
+    .matcher-panel .m-diagnosis em { color: #a78bfa; font-style: normal; font-weight: 600; }
+
+    .m-label {
+      font-size: var(--text-xs); font-weight: 600; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--text-muted);
+      margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+    }
+    .m-strategies { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+    .m-strategy {
+      display: flex; gap: 14px; align-items: flex-start;
+      padding: 13px 16px;
+      background: rgba(255,255,255,.02);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      transition: border-color var(--dur), background var(--dur);
+    }
+    .m-strategy:hover { border-color: var(--border); background: rgba(255,255,255,.035); }
+    .m-strategy .s-num {
+      flex-shrink: 0; margin-top: 1px;
+      width: 24px; height: 24px; border-radius: 50%;
+      display: grid; place-items: center;
+      font-family: var(--mono); font-size: var(--text-xs); font-weight: 700;
+      color: var(--strat-accent, var(--accent-bright));
+      background: color-mix(in oklch, var(--strat-accent, var(--accent-bright)) 15%, transparent);
+    }
+    .m-strategy .s-body h4 {
+      font-size: var(--text-sm); font-weight: 600; color: var(--text-primary);
+      margin-bottom: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .m-strategy .s-body p { font-size: var(--text-sm); color: var(--text-secondary); line-height: 1.55; }
+    .m-strategy .s-phase-tag {
+      font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+      color: var(--strat-accent); opacity: .9;
+    }
+
+    .m-drills { display: flex; flex-wrap: wrap; gap: 10px; }
+    .drill-pill {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--surface-1); border: 1px solid var(--border);
+      border-radius: 20px; padding: 7px 14px 7px 12px;
+      font-size: var(--text-xs); font-weight: 600;
+      color: var(--text-secondary); text-decoration: none;
+      transition: all var(--dur);
+    }
+    .drill-pill:hover { border-color: var(--border-strong); background: var(--surface-2); color: var(--text-primary); transform: translateY(-1px); }
+    .drill-pill .dp-tag {
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      padding: 2px 7px; border-radius: 10px;
+    }
+    .dp-aws    { background: rgba(245,158,11,.15); color: #fcd34d; }
+    .dp-k8s    { background: rgba(59,130,246,.15); color: #93c5fd; }
+    .dp-gitlab { background: rgba(234,67,53,.15);  color: #fca5a5; }
+    .dp-triage { background: rgba(167,139,250,.16); color: #c4b5fd; }
+    .drill-pill .dp-arrow { color: var(--accent-bright); }
+
+    /* ── Methods library ── */
+    .methods-toolbar {
+      display: flex; flex-wrap: wrap; gap: 12px;
+      align-items: center; margin-bottom: 20px;
+    }
+    .search-wrap { position: relative; flex: 1; min-width: 220px; }
+    .search-wrap svg {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      width: 16px; height: 16px; color: var(--text-muted); pointer-events: none;
+    }
+    #methodSearch {
+      width: 100%; font-family: var(--font); font-size: var(--text-sm);
+      background: var(--surface-1); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text-primary);
+      padding: 10px 12px 10px 36px;
+      transition: border-color var(--dur), background var(--dur);
+    }
+    #methodSearch::placeholder { color: var(--text-muted); }
+    #methodSearch:focus { outline: none; border-color: var(--accent-bright); background: var(--surface-2); }
+
+    .filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .filter-chip {
+      font-family: var(--font); font-size: var(--text-xs); font-weight: 600;
+      background: var(--surface-1); border: 1px solid var(--border);
+      border-radius: 18px; color: var(--text-muted);
+      padding: 7px 13px; cursor: pointer; transition: all var(--dur);
+    }
+    .filter-chip:hover { color: var(--text-secondary); border-color: var(--border-strong); }
+    .filter-chip.active { color: var(--text-primary); background: var(--surface-2); border-color: var(--border-strong); }
+    .filter-chip.active[data-phase] { border-color: var(--fc-accent); color: var(--fc-accent); }
+
+    .methods-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+    }
+    .method-card {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      transition: border-color var(--dur), background var(--dur);
+    }
+    .method-card:hover { background: var(--surface-2); border-color: var(--border-strong); }
+    .method-card.is-hidden { display: none; }
+    .method-card .mc-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+    .method-card h4 { font-size: var(--text-base); font-weight: 600; color: var(--text-primary); }
+    .method-card .mc-phase {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+      color: var(--text-muted); flex-shrink: 0;
+    }
+    .method-card .mc-phase::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--m-accent); flex-shrink: 0;
+    }
+    .method-card p { font-size: var(--text-sm); color: var(--text-secondary); line-height: 1.55; }
+    .method-card .mc-when {
+      margin-top: 10px; font-size: var(--text-xs); color: var(--text-muted); line-height: 1.5;
+    }
+    .method-card .mc-when b { color: var(--text-secondary); font-weight: 600; }
+    .methods-empty { color: var(--text-muted); font-size: var(--text-sm); padding: 20px 0; }
+
+    /* ── Escalation ladder ── */
+    .ladder { display: flex; flex-direction: column; gap: 0; }
+    .rung {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface-1);
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .rung-head {
+      width: 100%; text-align: left; cursor: pointer;
+      background: transparent; border: none; color: inherit;
+      font-family: var(--font);
+      display: flex; align-items: center; gap: 14px;
+      padding: 16px 18px;
+      transition: background var(--dur);
+    }
+    .rung-head:hover { background: var(--surface-2); }
+    .rung-num {
+      flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+      display: grid; place-items: center;
+      font-family: var(--mono); font-size: var(--text-sm); font-weight: 700;
+      background: var(--rung-accent); color: #040714;
+    }
+    .rung-head .rung-title { font-size: var(--text-base); font-weight: 600; color: var(--text-primary); }
+    .rung-head .rung-sub { font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px; }
+    .rung-head .rung-chev {
+      margin-left: auto; color: var(--text-muted);
+      transition: transform var(--dur); flex-shrink: 0;
+    }
+    .rung.open .rung-chev { transform: rotate(180deg); }
+    .rung-body {
+      display: none;
+      padding: 0 18px 18px 60px;
+    }
+    .rung.open .rung-body { display: block; animation: fadeIn var(--dur) ease; }
+    .rung-body ul { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+    .rung-body li {
+      display: flex; gap: 9px; align-items: flex-start;
+      font-size: var(--text-sm); color: var(--text-secondary); line-height: 1.5;
+    }
+    .rung-body li::before {
+      content: '→'; color: var(--rung-accent); flex-shrink: 0; font-weight: 700; opacity: .8;
+    }
+
+    /* ── Plan B + Suspects grid cards ── */
+    .card {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 26px 28px;
+      backdrop-filter: blur(10px);
+    }
+    .planb-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+    }
+    .planb-item {
+      background: rgba(255,255,255,.02);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+    }
+    .planb-item .pb-icon { font-size: 1.5rem; line-height: 1; margin-bottom: 8px; display: block; }
+    .planb-item h4 { font-size: var(--text-sm); font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+    .planb-item p { font-size: var(--text-xs); color: var(--text-secondary); line-height: 1.55; }
+    .planb-note {
+      margin-top: 18px; padding: 14px 16px;
+      background: rgba(0,99,229,.08); border: 1px solid rgba(0,99,229,.22);
+      border-radius: var(--radius); font-size: var(--text-sm);
+      color: var(--text-secondary); line-height: 1.6;
+    }
+    .planb-note strong { color: #cfe4ff; }
+
+    .suspects {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .suspect {
+      display: flex; gap: 12px; align-items: center;
+      background: rgba(255,255,255,.02);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+    }
+    .suspect .s-emoji { font-size: 1.4rem; line-height: 1; flex-shrink: 0; }
+    .suspect h4 { font-size: var(--text-sm); font-weight: 600; color: var(--text-primary); }
+    .suspect p { font-size: var(--text-xs); color: var(--text-muted); line-height: 1.45; margin-top: 2px; }
+
+    /* ── CTA ── */
+    .cta-card {
+      background: linear-gradient(135deg, rgba(176,21,176,.12), rgba(61,0,128,.1));
+      border: 1px solid rgba(167,139,250,.28);
+      border-radius: var(--radius-lg);
+      padding: 32px; text-align: center;
+      margin-top: 20px;
+    }
+    .cta-card h3 { font-size: var(--text-xl); font-weight: 700; color: var(--text-primary); margin-bottom: 10px; }
+    .cta-card p { font-size: var(--text-base); color: var(--text-secondary); line-height: 1.6; max-width: 520px; margin: 0 auto 20px; }
+    .cta-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--font); font-size: var(--text-sm); font-weight: 600;
+      padding: 11px 20px; border-radius: var(--radius);
+      text-decoration: none; cursor: pointer; border: 1px solid transparent;
+      transition: all var(--dur);
+    }
+    .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-primary:hover { background: var(--accent-bright); transform: translateY(-1px); }
+    .btn-ghost { background: transparent; color: var(--text-secondary); border-color: var(--border-strong); }
+    .btn-ghost:hover { color: var(--text-primary); background: var(--surface-2); }
+
+    /* ── Footer ── */
+    .info-footer {
+      text-align: center; padding: 20px 24px 28px;
+      color: rgba(255,255,255,.22); font-size: .78em; line-height: 1.8;
+      border-top: 1px solid rgba(255,255,255,.05); margin-top: 56px;
+    }
+    .info-footer a { color: rgba(255,255,255,.35); text-decoration: none; }
+    .info-footer a:hover { color: rgba(255,255,255,.6); }
+
+    :focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 2px; }
+    .skip-link {
+      position: absolute; top: -100%; left: 16px; z-index: 1000;
+      padding: 8px 16px; background: var(--accent-bright); color: #000;
+      font-weight: 600; font-size: .875rem; border-radius: 0 0 6px 6px;
+      text-decoration: none; transition: top .2s;
+    }
+    .skip-link:focus { top: 0; }
+
+    button:active, .btn:active { transform: scale(0.97); transition-duration: 120ms; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+    @media (max-width: 640px) {
+      .header-nav a[data-optional] { display: none; }
+      .rung-body { padding-left: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="header-bar">
+    <div class="header-logo">
+      <a href="https://neorgon.com/" target="_blank" rel="noopener">
+        <img src="../energon-classic-logo.png" class="header-logo-img" alt="Energon">
+      </a>
+      <a href="../" class="header-title-link">
+        <h1>Infra Drills</h1>
+        <div class="header-subtitle">The Troubleshooting Framework</div>
+      </a>
+    </div>
+    <nav class="header-nav">
+      <a href="#matcher" data-optional>Scenario matcher</a>
+      <a href="#methods" data-optional>Methods</a>
+      <a href="../">Drills</a>
+    </nav>
+    <a class="header-home" href="https://neorgon.com/" title="neorgon.com" aria-label="Neorgon home">
+      <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+      </svg>
+    </a>
+  </header>
+
+  <main class="container" id="main">
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-badge">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="5" r="5"/></svg>
+        A framework, not a checklist
+      </div>
+      <h2>Something's broken.<br><span>Here's how to think.</span></h2>
+      <p>Every incident is different, but the way you approach it doesn't have to be. Match the symptom to the strategy — comparison, discarding, time correlation, rollback — then practice it on a real broken environment.</p>
+    </div>
+
+    <!-- The Loop -->
+    <div class="section-heading">The Loop · How an incident actually flows</div>
+    <p class="section-lead">Good troubleshooting is a loop you run under pressure: <strong>assess before you touch anything</strong>, orient on what changed, isolate the cause by elimination, resolve (or fall back), then feed what you learned back in. Panic skips straight to "resolve" — and usually makes it worse.</p>
+    <div class="loop" id="loop"></div>
+
+    <!-- Scenario matcher -->
+    <div class="section-heading" id="matcher">Scenario → Strategy · Match the situation to the method</div>
+    <p class="section-lead matcher-intro">The situation tells you which strategy to reach for first. Pick what you're seeing — you'll get an ordered set of moves and the drills that let you rehearse them.</p>
+    <div class="scenario-chips" id="scenarioChips" role="tablist" aria-label="Incident scenarios"></div>
+    <div class="matcher-panel" id="matcherPanel" role="region" aria-live="polite">
+      <div class="matcher-empty">Pick a scenario above. Each one maps to the strategies that resolve it fastest — and the hands-on drills where you can practice.</div>
+    </div>
+
+    <!-- Methods library -->
+    <div class="section-heading" id="methods">Methods Library · The moves, defined</div>
+    <p class="section-lead">The full toolkit, grouped by which phase of the loop they belong to. Search by name or symptom; filter by phase.</p>
+    <div class="methods-toolbar">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="methodSearch" placeholder="Search methods — e.g. 'compare', 'logs', 'rollback'…" autocomplete="off" aria-label="Search methods">
+      </div>
+      <div class="filter-chips" id="phaseFilters"></div>
+    </div>
+    <div class="methods-grid" id="methodsGrid"></div>
+    <div class="methods-empty" id="methodsEmpty" hidden>No methods match that search.</div>
+
+    <!-- Escalation ladder -->
+    <div class="section-heading">The Escalation Ladder · Where to look, in order</div>
+    <p class="section-lead">When you don't know where the problem lives, walk the ladder from your side of the fence outward. Most incidents resolve on the first two rungs — the discipline is asking the right questions before blaming the layer below you.</p>
+    <div class="ladder" id="ladder"></div>
+
+    <!-- Plan B -->
+    <div class="section-heading">Plan B · When you're stuck, stop guessing</div>
+    <p class="section-lead">Random fixes under pressure turn one incident into two. When you're out of leads, switch from <strong>finding the cause</strong> to <strong>stopping the bleeding</strong>.</p>
+    <div class="card">
+      <div class="planb-grid" id="planbGrid"></div>
+      <div class="planb-note">
+        <strong>Admitting you need more time or help is good engineering.</strong> The goal is a healthy system, not a hero. Buy time with a fallback, then debug calmly.
+      </div>
+    </div>
+
+    <!-- Usual suspects -->
+    <div class="section-heading">The Usual Suspects · Check these first</div>
+    <p class="section-lead">Before the deep dive, rule out the classics. A surprising share of "impossible" incidents are one of these six.</p>
+    <div class="suspects" id="suspects"></div>
+
+    <!-- CTA -->
+    <div class="cta-card">
+      <h3>Reading about it isn't the same as doing it</h3>
+      <p>These strategies stick when you've run them on something actually broken. Every drill drops you into a failing environment with a validation command and a root-cause solution.</p>
+      <div class="cta-btns">
+        <a class="btn btn-primary" href="../#main">Browse the drills →</a>
+        <a class="btn btn-ghost" href="https://github.com/energon-a-secas/local-drills/tree/main/triage" target="_blank" rel="noopener">See the triage tickets</a>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="info-footer">
+    Part of <a href="https://neorgon.com/">Neorgon</a> ·
+    The Troubleshooting Framework · Distilled from field notes and 40+ break-fix drills ·
+    <a href="https://github.com/energon-a-secas/local-drills" target="_blank" rel="noopener">GitHub</a>
+  </footer>
+
+  <script>
+    // ── Drill link builder ───────────────────────────────────────
+    const REPO = 'https://github.com/energon-a-secas/local-drills/tree/main';
+    const drill = (dir, section, label) => ({
+      label,
+      section, // aws | k8s | gitlab | triage
+      url: `${REPO}/${section === 'k8s' ? 'kubernetes' : section === 'triage' ? 'triage' : section}/${dir}`
+    });
+
+    // ── The Loop ─────────────────────────────────────────────────
+    const LOOP = [
+      { n: 1, key: 'assess',    title: 'Assess',    accent: 'var(--p-assess)',
+        text: 'Gauge the blast radius before you touch anything. Which environment, who is affected, is it livable?',
+        q: 'How bad is it, really?' },
+      { n: 2, key: 'orient',    title: 'Orient',    accent: 'var(--p-orient)',
+        text: 'Pin when it started and confirm you can reproduce it. Line the timeline up against what changed.',
+        q: 'When did it start — and what changed?' },
+      { n: 3, key: 'isolate',   title: 'Isolate',   accent: 'var(--p-isolate)',
+        text: 'Narrow the cause by elimination. Compare working vs broken, discard candidates, change one thing at a time.',
+        q: 'What is different here?' },
+      { n: 4, key: 'resolve',   title: 'Resolve',   accent: 'var(--p-resolve)',
+        text: 'Apply the fix — or fall back. Rollback, feature-flag, or a workaround all count as resolving.',
+        q: 'Fix it, or stop the bleeding?' },
+      { n: 5, key: 'learn',     title: 'Learn',     accent: 'var(--p-learn)',
+        text: 'Capture the timeline, write the runbook, share it. Every incident grows your pattern library.',
+        q: 'How do we not relive this?' },
+    ];
+
+    // ── Methods library ──────────────────────────────────────────
+    // phase keys map to loop stages (+ 'understand' as a cross-cutting phase)
+    const PHASES = {
+      assess:     { label: 'Assess',     accent: 'var(--p-assess)' },
+      orient:     { label: 'Orient',     accent: 'var(--p-orient)' },
+      isolate:    { label: 'Isolate',    accent: 'var(--p-isolate)' },
+      understand: { label: 'Understand', accent: 'var(--p-understand)' },
+      resolve:    { label: 'Resolve',    accent: 'var(--p-resolve)' },
+      learn:      { label: 'Learn',      accent: 'var(--p-learn)' },
+    };
+
+    const METHODS = {
+      'blast-radius': { name: 'Blast Radius', phase: 'assess',
+        desc: 'Score severity before diving in: prod outranks dev, delivery-blocking outranks cosmetic. Loop in management early if it hurts the team.',
+        when: 'The very first move on any alert.' },
+      'escalate-early': { name: 'Escalate Early', phase: 'assess',
+        desc: 'Raise your hand before you become the single point of failure. Early visibility buys you patience and hands.',
+        when: 'It touches prod, revenue, or more than one team.' },
+      'time-correlation': { name: 'Time Correlation', phase: 'orient',
+        desc: 'Establish exactly when it started, then line the timeline up against deploys, cron jobs, cert expiry, and provider events.',
+        when: 'Always. "When did it start?" is the highest-yield question.' },
+      'reproduce': { name: 'Reproduce It First', phase: 'orient',
+        desc: 'Confirm you can trigger the failure reliably before changing anything. A fix you can’t verify against a repro is a guess.',
+        when: 'Before you attempt any fix.' },
+      'read-error': { name: 'Read the Error', phase: 'orient',
+        desc: 'Read the whole message and stack trace, not just the first red line. The real cause is often three lines down.',
+        when: 'Any time there is an actual error string.' },
+      'verify-assumptions': { name: 'Verify Assumptions', phase: 'orient',
+        desc: 'Test the things you "know" to be true — the config is loaded, DNS resolves, the token is valid. The bug lives in an unchecked assumption.',
+        when: 'When the cause "makes no sense".' },
+      'comparison': { name: 'Comparison', phase: 'isolate',
+        desc: 'Diff a working instance against the broken one — environments, configs, versions, permissions. The delta is your suspect list.',
+        when: '"Works in dev, not prod" / one replica misbehaves.' },
+      'contrast': { name: 'Contrast', phase: 'isolate',
+        desc: 'Compare now against the last known-good state of the same thing. What is different from when it worked?',
+        when: '"It was fine yesterday."' },
+      'rule-out': { name: 'Rule Out (Discard)', phase: 'isolate',
+        desc: 'Systematically eliminate candidate causes one by one until only the culprit remains. Disable, bypass, or pull a replica and watch.',
+        when: 'Several plausible causes, no obvious winner.' },
+      'change-one-thing': { name: 'Change One Thing', phase: 'isolate',
+        desc: 'Alter a single variable at a time so you always know what fixed it — or what didn’t. Shotgun changes hide the real cause.',
+        when: 'Every time you start editing.' },
+      'read-logs': { name: 'Read the Logs', phase: 'isolate',
+        desc: 'Trace the request end to end, correlating timestamps across services. Follow the path, not just the error.',
+        when: 'Connectivity, 5xx, and "silent" failures.' },
+      'bisect': { name: 'Bisect', phase: 'isolate',
+        desc: 'Halve the search space each step — git bisect a regression, disable half the config, cut the request path in two.',
+        when: 'A regression hidden somewhere in a large change set.' },
+      'rubber-duck': { name: 'Rubber Duck', phase: 'understand',
+        desc: 'Explain the problem out loud or in writing, line by line. The gap in your own story is usually the bug.',
+        when: 'You’re going in circles.' },
+      'diagrams': { name: 'Make Diagrams', phase: 'understand',
+        desc: 'Draw the request path and dependency graph. You cannot fix what you cannot picture.',
+        when: 'Multi-hop / distributed failures.' },
+      'take-notes': { name: 'Take Notes', phase: 'understand',
+        desc: 'Keep a running timeline of what you tried and saw, so anyone joining mid-incident is instantly caught up.',
+        when: 'Any incident lasting more than a few minutes.' },
+      'scientific-method': { name: 'The Scientific Method', phase: 'understand',
+        desc: 'Form a hypothesis, design the smallest test that could disprove it, record the result. Repeat.',
+        when: 'The hard ones, where intuition has run out.' },
+      'mock': { name: 'Mock', phase: 'understand',
+        desc: 'Reproduce the correct behavior in isolation to prove what "working" looks like, then compare against reality.',
+        when: 'You’re unsure what the system should even do.' },
+      'rollback': { name: 'Rollback', phase: 'resolve',
+        desc: 'Return to the last known-good version. Fastest way to stop the bleeding when a change caused it — mind state you can’t roll back.',
+        when: 'A recent deploy is the prime suspect.' },
+      'feature-flag': { name: 'Feature Flag / Circuit Breaker', phase: 'resolve',
+        desc: 'Turn the offending path off without a deploy. Degrade gracefully instead of failing hard.',
+        when: 'One feature is dragging the whole system down.' },
+      'workaround': { name: 'Workaround', phase: 'resolve',
+        desc: 'Restore service by an alternate route while the real fix waits. Label it clearly so it doesn’t become permanent.',
+        when: 'Root cause will take longer than the outage allows.' },
+      'communicate': { name: 'Communicate', phase: 'resolve',
+        desc: 'Tell stakeholders what you know, what you’re doing, and when you’ll update next. Silence is scarier than bad news.',
+        when: 'Continuously, during anything user-facing.' },
+      'pair-up': { name: 'Pair Up', phase: 'resolve',
+        desc: 'Pull in a second brain. Tunnel vision is real; a fresh set of eyes breaks the loop.',
+        when: 'You’ve been stuck on the same theory too long.' },
+      'accept-error': { name: 'Accept the Error', phase: 'resolve',
+        desc: 'Some errors are noise, not signal. Consciously decide to live with a non-critical failure and move on.',
+        when: 'The "error" isn’t actually the incident.' },
+      'runbook': { name: 'Write the Runbook', phase: 'learn',
+        desc: 'Turn the fix into steps the next person can follow at 3 AM without paging you.',
+        when: 'After resolving anything likely to recur.' },
+      'post-mortem': { name: 'Post-mortem', phase: 'learn',
+        desc: 'Blameless write-up: timeline, root cause, contributing factors, and the action items that prevent a repeat.',
+        when: 'After any significant or user-facing incident.' },
+      'share': { name: 'Share (Avoid SPOF)', phase: 'learn',
+        desc: 'Spread the knowledge so you’re not the only one who can fix it. Being irreplaceable is a liability, not job security.',
+        when: 'Whenever a fix lived only in your head.' },
+    };
+
+    // ── Scenarios (the matcher) ──────────────────────────────────
+    const SCENARIOS = [
+      { id: 'nothing-changed', label: 'Nothing changed', quote: '"but nobody deployed anything"',
+        symptom: 'It broke, and everyone swears nothing changed.',
+        diagnosis: 'Something always changed — you just can’t see it yet. Pin the timeline and hunt for the invisible edit: a dependency that moved, a cert that expired, a cron that fired. And test the "we updated it" claims: verify the value the system actually reads.',
+        strategies: ['time-correlation', 'contrast', 'verify-assumptions', 'comparison'],
+        drills: [ drill('triage-01-api-502-gateway','triage','triage-01 · API 502, "nothing changed"'), drill('triage-03-pipeline-broke-overnight','triage','triage-03 · Broke overnight'), drill('triage-12-config-assumed-updated','triage','triage-12 · Config assumed updated') ] },
+      { id: 'works-in-dev', label: 'Works in dev, fails in prod', quote: '"works on my machine"',
+        symptom: 'Identical code, but it only fails in one environment.',
+        diagnosis: 'The code is a red herring — the <em>environment</em> is the variable. Diff the two: config, env vars, IAM, networking, versions. The delta is the bug.',
+        strategies: ['comparison', 'verify-assumptions', 'change-one-thing', 'read-logs'],
+        drills: [ drill('triage-10-crashloop-one-environment','triage','triage-10 · Staging vs production'), drill('triage-05-lambda-works-locally-not-prod','triage','triage-05 · Lambda: local vs prod VPC'), drill('triage-08-deploy-works-locally-fails-ci','triage','triage-08 · Works locally, fails in CI'), drill('lambda-10-vpc-no-internet','aws','lambda-10 · VPC no internet') ] },
+      { id: 'broke-overnight', label: 'Broke overnight', quote: '"no code changes"',
+        symptom: 'Green yesterday, red this morning, no one shipped anything.',
+        diagnosis: 'An unpinned dependency or floating tag moved under you. Contrast today against the last good run and look for anything resolved "latest".',
+        strategies: ['time-correlation', 'contrast', 'bisect', 'read-error'],
+        drills: [ drill('triage-03-pipeline-broke-overnight','triage','triage-03 · node:latest moved majors'), drill('triage-13-find-the-bad-entry','triage','triage-13 · Bisect the bad entry') ] },
+      { id: 'intermittent', label: 'Intermittent / random', quote: '"only sometimes"',
+        symptom: 'Fails randomly — some requests fine, some 503.',
+        diagnosis: 'A subset of your fleet is bad. Discard replicas one at a time until it goes green, then compare the culprit against a healthy one.',
+        strategies: ['rule-out', 'comparison', 'read-logs', 'reproduce'],
+        drills: [ drill('triage-06-service-intermittent-503','triage','triage-06 · Intermittent 503'), drill('k8s-04-service-selector-mismatch','k8s','k8s-04 · Service selector mismatch') ] },
+      { id: 'after-change', label: 'Broke right after a change', quote: '"since the last deploy"',
+        symptom: 'It started failing immediately after a deploy or edit.',
+        diagnosis: 'You have your prime suspect. Roll back to confirm causation, then bisect the change to find the exact line — mind state a rollback can’t undo.',
+        strategies: ['rollback', 'contrast', 'bisect', 'change-one-thing'],
+        drills: [ drill('triage-02-app-crash-after-rollback','triage','triage-02 · Still crashing after rollback'), drill('k8s-11-rolling-update-stuck','k8s','k8s-11 · Rolling update stuck') ] },
+      { id: 'everything-broke', label: 'Everything broke at once', quote: '"all jobs are red"',
+        symptom: 'Many unrelated things fail simultaneously.',
+        diagnosis: 'Simultaneous failure across independent things is never coincidence — they share something. Find the one common factor (a base image, a shared template, a global var) and rule out the individuals by isolating it.',
+        strategies: ['rule-out', 'change-one-thing', 'comparison', 'read-error'],
+        drills: [ drill('triage-11-everything-broke-at-once','triage','triage-11 · Shared before_script broke all jobs') ] },
+      { id: 'cant-connect', label: 'Can’t connect / network black hole', quote: '"connection refused / timeout"',
+        symptom: 'A can’t reach B — timeouts, refused, or DNS failures.',
+        diagnosis: 'Draw the request path and walk it hop by hop. Verify DNS resolves, the route exists, and something is actually listening on the port.',
+        strategies: ['diagrams', 'read-logs', 'verify-assumptions', 'comparison'],
+        drills: [ drill('triage-07-dns-wrong-namespace','triage','triage-07 · Cross-namespace DNS'), drill('vpc-01-subnet-no-internet','aws','vpc-01 · Subnet no internet'), drill('k8s-10-network-policy-blocks-traffic','k8s','k8s-10 · NetworkPolicy blocks traffic') ] },
+      { id: 'access-denied', label: 'Access denied / permissions', quote: '"403 / Forbidden"',
+        symptom: 'Auth or permission errors where access "should" work.',
+        diagnosis: 'Read the full denial — it usually names the missing action. Then compare the failing principal’s policy against one that works.',
+        strategies: ['read-error', 'comparison', 'verify-assumptions'],
+        drills: [ drill('triage-04-s3-access-denied-policy','triage','triage-04 · S3 access denied'), drill('iam-01-assume-role-issue','aws','iam-01 · Assume-role external ID'), drill('k8s-12-rbac-forbidden','k8s','k8s-12 · RBAC forbidden') ] },
+      { id: 'slow', label: 'Slow / performance regression', quote: '"it got slow"',
+        symptom: 'Same functionality, suddenly much slower.',
+        diagnosis: 'Correlate the slowdown to a change, then compare a fast path against the slow one. A cache key or capacity setting is a frequent culprit.',
+        strategies: ['time-correlation', 'comparison', 'bisect', 'read-logs'],
+        drills: [ drill('triage-09-pipeline-slow-cache-miss','triage','triage-09 · Cache-miss slowdown'), drill('dynamodb-01-throttled-reads','aws','dynamodb-01 · Throttled reads') ] },
+      { id: 'no-idea', label: 'Under pressure, no idea where to start', quote: '"everything’s on fire"',
+        symptom: 'High-severity, unclear cause, and the clock is running.',
+        diagnosis: 'Don’t start fixing — start framing. Size the blast radius, confirm a repro, raise your hand, and keep a timeline. Calm process beats fast guessing.',
+        strategies: ['blast-radius', 'reproduce', 'escalate-early', 'take-notes'],
+        drills: [ drill('triage-01-api-502-gateway','triage','triage-01 · Incident-response ticket'), drill('triage-02-app-crash-after-rollback','triage','triage-02 · Incident-response ticket') ] },
+      { id: 'stuck', label: 'Tried everything, still stuck', quote: '"out of ideas"',
+        symptom: 'You’ve been at it a while and you’re out of leads.',
+        diagnosis: 'Switch goals: from finding the cause to stopping the bleeding. Buy time with a fallback, pull in a second brain, and communicate.',
+        strategies: ['rollback', 'workaround', 'pair-up', 'communicate'],
+        drills: [ drill('triage-13-find-the-bad-entry','triage','triage-13 · Bisect to localize the fault') ] },
+    ];
+
+    // ── Escalation ladder ────────────────────────────────────────
+    const LADDER = [
+      { n: 1, title: 'Infrastructure', sub: 'Your side of the fence — check here first',
+        accent: 'var(--p-assess)',
+        items: ['Network, DNS, firewall, routing, load-balancer rules', 'Certificate expiry (it expires at the worst time)', 'IAM / security policies and recent changes to them', 'Resource availability — quotas, capacity, disk, memory', 'Cloud provider status page'] },
+      { n: 2, title: 'Development', sub: 'The application and its config',
+        accent: 'var(--p-orient)',
+        items: ['Environment variables and configuration', 'Recent code changes and open feature flags', 'Dependency versions — did something float to "latest"?', 'Database migrations that ran (or didn’t)', 'Error rates and new exceptions in the logs'] },
+      { n: 3, title: 'Dependencies', sub: 'The things you don’t own',
+        accent: 'var(--p-isolate)',
+        items: ['Third-party / upstream status pages', 'Token or API-key expiry and rotation', 'Rate limits and quota exhaustion', 'Breaking contract changes in an API you consume', 'SDK / client library updates'] },
+      { n: 4, title: 'Everything Else', sub: 'The blind spots',
+        accent: 'var(--p-resolve)',
+        items: ['Broken or lying monitoring — is the alert even real?', 'Scheduled jobs firing at midnight', 'Long-standing issues that only now surfaced', 'Two changes at once masking each other', 'Different definitions of "working" between teams'] },
+    ];
+
+    // ── Plan B ───────────────────────────────────────────────────
+    const PLANB = [
+      { icon: '↩️', title: 'Rollback', desc: 'Return to the last known-good version. Fastest bleed-stop when a change caused it.' },
+      { icon: '🚦', title: 'Feature flag / circuit breaker', desc: 'Turn the bad path off without a deploy. Degrade gracefully instead of failing hard.' },
+      { icon: '🔀', title: 'Workaround', desc: 'Restore service by an alternate route while the real fix waits. Label it clearly.' },
+      { icon: '📣', title: 'Communicate', desc: 'Say what you know and when you’ll update. Silence is scarier than bad news.' },
+      { icon: '🤝', title: 'Pair up', desc: 'A second brain breaks tunnel vision. Being stuck alone is a choice.' },
+    ];
+
+    // ── Usual suspects ───────────────────────────────────────────
+    const SUSPECTS = [
+      { e: '🗄️', title: 'The cache', desc: 'Stale, mis-keyed, or never invalidated.' },
+      { e: '🌐', title: 'DNS', desc: 'It is always DNS. Resolution, propagation, wrong record.' },
+      { e: '📜', title: 'Expired certs', desc: 'TLS quietly lapsed at the worst possible moment.' },
+      { e: '🔐', title: 'Permissions', desc: 'IAM, RBAC, file mode — a policy tightened somewhere.' },
+      { e: '🧪', title: '"It works in dev"', desc: 'An environment difference you haven’t diffed yet.' },
+      { e: '👻', title: 'Unused features', desc: 'A path that never actually ran in production until now.' },
+    ];
+
+    // ── Render helpers ───────────────────────────────────────────
+    const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const sectionClass = s => ({ aws:'dp-aws', k8s:'dp-k8s', gitlab:'dp-gitlab', triage:'dp-triage' }[s] || 'dp-triage');
+    const sectionTag   = s => ({ aws:'AWS', k8s:'K8S', gitlab:'CI', triage:'TRIAGE' }[s] || s);
+
+    // Render: The Loop
+    document.getElementById('loop').innerHTML = LOOP.map(s => `
+      <div class="loop-stage" style="--stage-accent:${s.accent}">
+        <span class="step-n">STEP ${s.n}</span>
+        <h3>${s.title}</h3>
+        <p>${esc(s.text)}</p>
+        <span class="stage-q">${esc(s.q)}</span>
+      </div>`).join('');
+
+    // Render: scenario chips
+    const chipsEl = document.getElementById('scenarioChips');
+    chipsEl.innerHTML = SCENARIOS.map(s => `
+      <button class="scenario-chip" role="tab" aria-selected="false" data-id="${s.id}">
+        ${esc(s.label)} <span class="chip-quote">${esc(s.quote)}</span>
+      </button>`).join('');
+
+    const panelEl = document.getElementById('matcherPanel');
+    function renderScenario(id) {
+      const s = SCENARIOS.find(x => x.id === id);
+      if (!s) return;
+      const strategies = s.strategies.map((mid, i) => {
+        const m = METHODS[mid]; if (!m) return '';
+        const ph = PHASES[m.phase];
+        return `<div class="m-strategy" style="--strat-accent:${ph.accent}">
+          <span class="s-num">${i + 1}</span>
+          <div class="s-body">
+            <h4>${esc(m.name)}<span class="s-phase-tag">${esc(ph.label)}</span></h4>
+            <p>${esc(m.desc)}</p>
+          </div>
+        </div>`;
+      }).join('');
+      const drills = s.drills.length ? `
+        <div class="m-label">Rehearse it${s.drills.length ? ` · ${s.drills.length} drill${s.drills.length>1?'s':''}` : ''}</div>
+        <div class="m-drills">${s.drills.map(d => `
+          <a class="drill-pill" href="${d.url}" target="_blank" rel="noopener">
+            <span class="dp-tag ${sectionClass(d.section)}">${sectionTag(d.section)}</span>
+            ${esc(d.label)} <span class="dp-arrow">↗</span>
+          </a>`).join('')}</div>` : `
+        <div class="m-label">Rehearse it</div>
+        <p style="font-size:var(--text-sm);color:var(--text-muted);line-height:1.6">This one is a mindset move — practice it by running <a href="../" style="color:var(--accent-bright);text-decoration:none">any drill</a> to time-limit and narrate your process out loud.</p>`;
+      panelEl.innerHTML = `
+        <div class="m-symptom">${esc(s.symptom)}</div>
+        <p class="m-diagnosis">${s.diagnosis}</p>
+        <div class="m-label">Strategy, in order</div>
+        <div class="m-strategies">${strategies}</div>
+        ${drills}`;
+    }
+
+    chipsEl.addEventListener('click', e => {
+      const btn = e.target.closest('.scenario-chip'); if (!btn) return;
+      chipsEl.querySelectorAll('.scenario-chip').forEach(c => {
+        const on = c === btn;
+        c.classList.toggle('active', on);
+        c.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      renderScenario(btn.dataset.id);
+    });
+
+    // Render: methods library
+    const gridEl = document.getElementById('methodsGrid');
+    const methodEntries = Object.entries(METHODS);
+    gridEl.innerHTML = methodEntries.map(([id, m]) => {
+      const ph = PHASES[m.phase];
+      return `<div class="method-card" data-phase="${m.phase}" data-text="${esc((m.name + ' ' + m.desc + ' ' + m.when).toLowerCase())}" style="--m-accent:${ph.accent}">
+        <div class="mc-head">
+          <h4>${esc(m.name)}</h4>
+          <span class="mc-phase">${esc(ph.label)}</span>
+        </div>
+        <p>${esc(m.desc)}</p>
+        <div class="mc-when"><b>When:</b> ${esc(m.when)}</div>
+      </div>`;
+    }).join('');
+
+    // Render: phase filters
+    const filtersEl = document.getElementById('phaseFilters');
+    filtersEl.innerHTML = `<button class="filter-chip active" data-filter="all">All</button>` +
+      Object.entries(PHASES).map(([k, p]) =>
+        `<button class="filter-chip" data-filter="${k}" data-phase style="--fc-accent:${p.accent}">${esc(p.label)}</button>`).join('');
+
+    let activePhase = 'all';
+    let searchTerm = '';
+    const emptyEl = document.getElementById('methodsEmpty');
+    function applyMethodFilter() {
+      let shown = 0;
+      gridEl.querySelectorAll('.method-card').forEach(card => {
+        const okPhase = activePhase === 'all' || card.dataset.phase === activePhase;
+        const okText = !searchTerm || card.dataset.text.includes(searchTerm);
+        const show = okPhase && okText;
+        card.classList.toggle('is-hidden', !show);
+        if (show) shown++;
+      });
+      emptyEl.hidden = shown !== 0;
+    }
+    filtersEl.addEventListener('click', e => {
+      const btn = e.target.closest('.filter-chip'); if (!btn) return;
+      activePhase = btn.dataset.filter;
+      filtersEl.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c === btn));
+      applyMethodFilter();
+    });
+    document.getElementById('methodSearch').addEventListener('input', e => {
+      searchTerm = e.target.value.trim().toLowerCase();
+      applyMethodFilter();
+    });
+
+    // Render: escalation ladder
+    document.getElementById('ladder').innerHTML = LADDER.map((r, i) => `
+      <div class="rung${i === 0 ? ' open' : ''}" style="--rung-accent:${r.accent}">
+        <button class="rung-head" aria-expanded="${i === 0}">
+          <span class="rung-num">${r.n}</span>
+          <span>
+            <span class="rung-title">${esc(r.title)}</span>
+            <span class="rung-sub">${esc(r.sub)}</span>
+          </span>
+          <svg class="rung-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="rung-body"><ul>${r.items.map(it => `<li>${esc(it)}</li>`).join('')}</ul></div>
+      </div>`).join('');
+    document.getElementById('ladder').addEventListener('click', e => {
+      const head = e.target.closest('.rung-head'); if (!head) return;
+      const rung = head.closest('.rung');
+      const open = rung.classList.toggle('open');
+      head.setAttribute('aria-expanded', open);
+    });
+
+    // Render: Plan B
+    document.getElementById('planbGrid').innerHTML = PLANB.map(p => `
+      <div class="planb-item">
+        <span class="pb-icon">${p.icon}</span>
+        <h4>${esc(p.title)}</h4>
+        <p>${esc(p.desc)}</p>
+      </div>`).join('');
+
+    // Render: suspects
+    document.getElementById('suspects').innerHTML = SUSPECTS.map(s => `
+      <div class="suspect">
+        <span class="s-emoji">${s.e}</span>
+        <div><h4>${esc(s.title)}</h4><p>${esc(s.desc)}</p></div>
+      </div>`).join('');
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# The validate job rejects the whole registry with a vague message and no
+# location. The file is valid JSON, so jq is no help — exactly one entry
+# violates a semantic rule. Bisect services.json to localize it fast.
+
+stages:
+  - validate
+
+validate:
+  stage: validate
+  image: node:20-alpine
+  script:
+    - node validate.js services.json

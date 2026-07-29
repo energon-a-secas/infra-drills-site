@@ -98,9 +98,19 @@
     .header-logo-img:hover { transform: scale(1.14) rotate(-9deg); }
     .header-logo h1 { font-size: 1.2em; font-weight: 600; color: var(--text-primary); letter-spacing: .5px; }
     .header-subtitle { font-size: .82em; color: rgba(255,255,255,.72); font-weight: 500; margin-top: 3px; }
+    .header-nav {
+      margin-left: auto;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .header-nav a {
+      color: rgba(255,255,255,.85); text-decoration: none;
+      font-size: var(--text-sm); font-weight: 500;
+      padding: 7px 12px; border-radius: var(--radius-sm);
+      transition: color var(--dur), background var(--dur);
+    }
+    .header-nav a:hover { color: #fff; background: rgba(255,255,255,.12); }
     .header-home {
       display: flex; align-items: center;
-      margin-left: auto;
       padding: 5px;
       color: rgba(255,255,255,0.9); text-decoration: none;
       border-radius: var(--radius-sm);
@@ -250,6 +260,39 @@
       gap: 4px;
     }
 
+    /* ── Framework banner ── */
+    .framework-banner {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 24px;
+      align-items: center;
+      background: linear-gradient(135deg, rgba(176,21,176,.12), rgba(61,0,128,.1));
+      border: 1px solid rgba(167,139,250,.28);
+      border-radius: var(--radius-lg);
+      padding: 28px 30px;
+      text-decoration: none;
+      transition: border-color var(--dur), transform var(--dur);
+    }
+    .framework-banner:hover { border-color: rgba(167,139,250,.5); transform: translateY(-2px); }
+    .framework-banner .fb-eyebrow {
+      font-size: var(--text-xs); font-weight: 600; letter-spacing: .1em;
+      text-transform: uppercase; color: #a78bfa; margin-bottom: 8px;
+    }
+    .framework-banner h3 { font-size: var(--text-xl); font-weight: 700; color: var(--text-primary); margin-bottom: 8px; line-height: 1.25; }
+    .framework-banner p { font-size: var(--text-sm); color: var(--text-secondary); line-height: 1.6; max-width: 560px; }
+    .framework-banner .fb-cta {
+      display: inline-flex; align-items: center; gap: 8px;
+      white-space: nowrap;
+      font-size: var(--text-sm); font-weight: 600;
+      color: #fff; background: var(--accent);
+      padding: 11px 20px; border-radius: var(--radius);
+      transition: background var(--dur);
+    }
+    .framework-banner:hover .fb-cta { background: var(--accent-bright); }
+    @media (max-width: 620px) {
+      .framework-banner { grid-template-columns: 1fr; }
+    }
+
     /* ── Quick start ── */
     .card {
       background: var(--surface-1);
@@ -380,6 +423,9 @@
         <div class="header-subtitle">Break-fix challenges for AWS, K8s, and GitLab</div>
       </a>
     </div>
+    <nav class="header-nav">
+      <a href="troubleshooting/">Framework</a>
+    </nav>
     <a class="header-home" href="https://neorgon.com/" title="neorgon.com" aria-label="Neorgon home">
       <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
         <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
@@ -452,6 +498,17 @@
       </a>
 
     </div>
+
+    <!-- Troubleshooting framework -->
+    <div class="section-heading">Before you dive in</div>
+    <a class="framework-banner" href="troubleshooting/">
+      <div>
+        <div class="fb-eyebrow">The Troubleshooting Framework</div>
+        <h3>Something's broken. Here's how to think.</h3>
+        <p>Match the symptom to the strategy — comparison, discarding, time correlation, rollback — with an interactive scenario matcher, a full methods library, and the escalation ladder. Every drill below is a rehearsal of these moves.</p>
+      </div>
+      <span class="fb-cta">Open the framework →</span>
+    </a>
 
     <!-- Quick start -->
     <div class="section-heading">Quick Start</div>
