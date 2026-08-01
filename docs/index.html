@@ -56,39 +56,7 @@
       flex-direction: column;
     }
 
-    /* ── Header ── */
-    .header-bar {
-      background: linear-gradient(135deg, #B015B0 0%, #3D0080 45%, #080010 100%);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border-subtle);
-      padding: 0 24px;
-      height: 68px;
-      position: sticky;
-      top: 0;
-      z-index: 200;
-      display: flex;
-      align-items: center;
-    }
-    .header-logo { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-    .header-logo-img {
-      height: 36px; width: auto; flex-shrink: 0;
-      filter: brightness(0) invert(1);
-      transition: transform 0.3s var(--ease-snap);
-      display: block;
-    }
-    .header-logo-img:hover { transform: scale(1.14) rotate(-9deg); }
-    .header-logo h1 { font-size: 1.2em; font-weight: 600; color: var(--text-primary); letter-spacing: .5px; }
-    .header-subtitle { font-size: .82em; color: rgba(255,255,255,.72); font-weight: 500; margin-top: 3px; }
-    .header-home {
-      display: flex; align-items: center;
-      margin-left: auto;
-      padding: 5px;
-      color: rgba(255,255,255,0.9); text-decoration: none;
-      border-radius: var(--radius-sm);
-      transition: color var(--dur), background var(--dur); flex-shrink: 0;
-    }
-    .header-home:hover { color: #fff; background: rgba(255,255,255,0.12); }
-    .header-home svg { width: 34px; height: 34px; display: block; }
+    /* Header is owned by the Neorgon Header Kit */
 
     /* ── Layout ── */
     .container {
@@ -345,6 +313,12 @@
     }
     .info-footer a:hover { color: rgba(255,255,255,.6); }
   </style>
+  <!-- Neorgon Header Kit (vendored; ?header=live swaps CSS to CDN) -->
+  <script>(function(){var m=location.search.match(/[?&]theme=([\w-]+)/)||document.cookie.match(/(?:^|;\s*)neo_theme=([\w-]+)/);if(m&&m[1]!=='default')document.documentElement.dataset.theme=decodeURIComponent(m[1]);})();</script>
+  <link rel="stylesheet" href="../css/neorgon-header.css">
+  <link rel="stylesheet" href="../css/neorgon-themes.css">
+  <link rel="stylesheet" href="https://pub-b597cd281a384f98a47e1f043a6c4160.r2.dev/v1.0.0/header/season.css">
+  <script defer src="../js/neorgon-header.js"></script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -358,22 +332,24 @@
 </head>
 <body>
 
-  <div class="header-bar">
+  <header class="header-bar" data-header-mode="content">
     <div class="header-logo">
       <a href="https://neorgon.com/" target="_blank" rel="noopener noreferrer">
         <img src="energon-classic-logo.png" class="header-logo-img" alt="Energon">
       </a>
-      <div>
+      <a href="../" class="header-title-link">
         <h1>Local Drills</h1>
         <div class="header-subtitle">Cloud infrastructure challenges, locally</div>
-      </div>
+      </a>
     </div>
-    <a class="header-home" href="https://neorgon.com/" title="neorgon.com" target="_blank" rel="noopener noreferrer">
-      <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-      </svg>
-    </a>
-  </div>
+    <div class="header-right">
+      <a class="header-home" href="https://neorgon.com/" title="neorgon.com" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+        </svg>
+      </a>
+    </div>
+  </header>
 
   <div class="container">
 
