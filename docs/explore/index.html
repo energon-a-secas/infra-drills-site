@@ -35,6 +35,8 @@
 
   <!-- App -->
   <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../../css/neorgon-footer.css">
+  <script defer src="../../js/neorgon-footer.js"></script>
 </head>
 <body>
   <header class="site-header" role="banner">
@@ -56,11 +58,9 @@
     <div class="loading" aria-label="Loading drill data">Loading drills...</div>
   </main>
 
-  <footer class="site-footer" role="contentinfo">
-    <div class="footer-inner">
-      <p>Local Drills &mdash; Practice AWS, Kubernetes & GitLab CI/CD troubleshooting locally.</p>
-      <p class="footer-sub">Built with LocalStack, Minikube & gitlab-ci-local. No cloud costs.</p>
-    </div>
+  <footer class="neo-footer" data-footer-mode="minimal">
+    <p>Practice AWS, Kubernetes & GitLab CI/CD troubleshooting locally.</p>
+    <p>Built with LocalStack, Minikube & gitlab-ci-local. No cloud costs.</p>
   </footer>
 
   <script src="../js/app.js"></script>
