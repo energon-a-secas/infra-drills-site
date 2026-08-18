@@ -4,18 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Local Drills is a collection of near-real-world troubleshooting challenges and simulations for AWS, Kubernetes, and GitLab CI/CD. Everything runs locally using LocalStack, Minikube, and gitlab-ci-local — no cloud costs involved. The repo serves as a learning platform, interview prep tool, and knowledge gap identifier.
+Local Drills is a collection of near-real-world troubleshooting challenges and simulations for AWS, Kubernetes, and GitLab CI/CD. Everything runs locally using LocalStack, Minikube, and gitlab-ci-local. No cloud costs involved. The repo serves as a learning platform, interview prep tool, and knowledge gap identifier.
 
 ## Repository Structure
 
-- `aws/` — AWS drills using LocalStack (pattern: `SERVICE-NUMBER-SHORT-TITLE`)
-- `kubernetes/` — Kubernetes drills using Minikube (pattern: `k8s-NUMBER-TITLE` or `eks-NUMBER-TITLE`)
-- `gitlab/` — GitLab CI/CD drills using gitlab-ci-local (pattern: `gitlab-NUMBER-TITLE`)
-- `projects/` — Working project examples (e.g., Serverless Express+DynamoDB API)
-- `scripts/` — Tooling (e.g., `new-drill.sh` scaffold script)
-- `assets/` — Documentation images
-- `quizzes/` — Knowledge-check quizzes (no infrastructure required)
-- `drill-index.yaml` — Central catalog of all drills with metadata
+- `aws/`: AWS drills using LocalStack (pattern: `SERVICE-NUMBER-SHORT-TITLE`)
+- `kubernetes/`: Kubernetes drills using Minikube (pattern: `k8s-NUMBER-TITLE` or `eks-NUMBER-TITLE`)
+- `gitlab/`: GitLab CI/CD drills using gitlab-ci-local (pattern: `gitlab-NUMBER-TITLE`)
+- `projects/`: Working project examples (e.g., Serverless Express+DynamoDB API)
+- `scripts/`: Tooling (e.g., `new-drill.sh` scaffold script)
+- `assets/`: Documentation images
+- `quizzes/`: Knowledge-check quizzes (no infrastructure required)
+- `drill-index.yaml`: Central catalog of all drills with metadata
 
 Each section has its own `Makefile`, `docker-compose.yml`, `README.md`, and `solutions/` directory.
 
@@ -24,8 +24,8 @@ Each section has its own `Makefile`, `docker-compose.yml`, `README.md`, and `sol
 ### Drill prefixes
 - **AWS**: Service-based prefix (`s3-`, `lambda-`, `iam-`, `sqs-`, `vpc-`, `dynamodb-`, `r53-`, `cfn-`)
 - **Kubernetes**:
-  - `k8s-`: Generic Kubernetes (works on any cluster — minikube, kind, etc.)
-  - `eks-`: AWS EKS-specific (ALB ingress, IRSA, Secrets Manager CSI, etc.)
+: `k8s-`: Generic Kubernetes (works on any cluster, minikube, kind, etc.)
+: `eks-`: AWS EKS-specific (ALB ingress, IRSA, Secrets Manager CSI, etc.)
 - **GitLab**: `gitlab-` prefix for all drills
 
 ### Numbering
@@ -85,16 +85,16 @@ Quizzes are YAML-based and require no infrastructure. Run `./quizzes/quiz.sh --h
 ## Drill Authoring Format
 
 Every drill README follows this structure:
-- **Problem/Request** — description of the issue (with optional Context and Hint)
-- **Validation** — command(s) to verify the solution works
-- **Solution** — link to `../solutions/SERVICE-NUMBER-TITLE.md`
+- **Problem/Request**: description of the issue (with optional Context and Hint)
+- **Validation**: command(s) to verify the solution works
+- **Solution**: link to `../solutions/SERVICE-NUMBER-TITLE.md`
 
 Solution files follow: The Issue → Solution steps → Understanding (concepts) → Testing → Common Mistakes → Additional Resources.
 
 Every drill directory should contain:
-- `README.md` — Problem description
-- `lab-initialization.sh` — Script to set up the broken environment
-- Template file(s) — `template.yaml` (CloudFormation or K8s manifest) or `.gitlab-ci.yml`
+- `README.md`: Problem description
+- `lab-initialization.sh`: Script to set up the broken environment
+- Template file(s): `template.yaml` (CloudFormation or K8s manifest) or `.gitlab-ci.yml`
 - Corresponding solution in `../solutions/`
 
 ## Quiz Authoring Format
@@ -110,7 +110,7 @@ The quiz runner (`quizzes/quiz.sh`) is pure bash with no external dependencies. 
 
 - AWS drills use `localstack/localstack-pro` image (port 4566) but `ACTIVATE_PRO=0` by default; most drills work with Community tier
 - LocalStack Community tier has simplified IAM (all resources can access everything)
-- The serverless-app container uses `arm64v8/node` image — relevant for Apple Silicon
+- The serverless-app container uses `arm64v8/node` image: relevant for Apple Silicon
 - Serverless Framework v4 with `serverless-localstack` plugin for local deployment
 - GitLab CI drills use `energonhq/nodejs:9` image with gitlab-ci-local pre-installed
 - macOS Docker Desktop may need the docker-compose symlink fix described in ISSUES.md
