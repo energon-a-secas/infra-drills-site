@@ -264,6 +264,35 @@ def copy_root_files():
         print(f"  Note: no {', '.join(missing)} at the repo root to copy")
 
 
+def copy_shared_kits():
+    """Copy the vendored Header/Footer Kit into the artifact.
+
+    packages/neorgon-ui/sync-header.sh vendors into the REPO ROOT css/ and js/,
+    which is the fleet convention, but this repo deploys docs/ as the site root.
+    So adopting the kit put the stylesheets somewhere that never shipped, every
+    one of them 404'd on the live site, and the homepage rendered unstyled.
+
+    docs/index.html asks for ../css/x. At the site root the browser normalises
+    that to /css/x, so copying the files to docs/css/ is enough and no markup
+    has to change.
+    """
+    n = 0
+    css_src, css_dst = ROOT / "css", DOCS_DIR / "css"
+    if css_src.is_dir():
+        css_dst.mkdir(exist_ok=True)
+        for f in css_src.glob("*.css"):
+            shutil.copy2(f, css_dst / f.name)
+            n += 1
+
+    js_src, js_dst = ROOT / "js", DOCS_DIR / "js"
+    if js_src.is_dir():
+        js_dst.mkdir(exist_ok=True)
+        for f in js_src.glob("neorgon-*.js"):   # kit files only; app.js is docs-owned
+            shutil.copy2(f, js_dst / f.name)
+            n += 1
+    print(f"  Copied {n} Header/Footer Kit file(s) -> docs/css, docs/js")
+
+
 def main():
     print("Building Local Drills site data...")
 
@@ -284,6 +313,7 @@ def main():
     # Copy assets
     copy_assets()
     copy_root_files()
+    copy_shared_kits()
 
     print("Done!")
 
