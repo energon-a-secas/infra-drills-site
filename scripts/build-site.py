@@ -242,6 +242,28 @@ def copy_assets():
         print(f"  Copied assets/ -> docs/assets/ ({len(list(ASSETS_DST.rglob('*')))} files)")
 
 
+# The Pages workflow uploads docs/ as the artifact, so anything left at the
+# repo root is never served. These four are generated and checked at the root
+# by the fleet tooling (`make llms`, the SEO templates), so the root stays
+# canonical and the build copies them into the artifact instead of moving them.
+ROOT_SITE_FILES = ("llms.txt", "sitemap.xml", "robots.txt", "og-preview.jpg")
+
+
+def copy_root_files():
+    """Copy root-level site files into docs/ so they actually deploy."""
+    copied = []
+    for name in ROOT_SITE_FILES:
+        src = ROOT / name
+        if src.is_file():
+            shutil.copy2(src, DOCS_DIR / name)
+            copied.append(name)
+    if copied:
+        print(f"  Copied {', '.join(copied)} -> docs/")
+    missing = [n for n in ROOT_SITE_FILES if not (ROOT / n).is_file()]
+    if missing:
+        print(f"  Note: no {', '.join(missing)} at the repo root to copy")
+
+
 def main():
     print("Building Local Drills site data...")
 
@@ -261,6 +283,7 @@ def main():
 
     # Copy assets
     copy_assets()
+    copy_root_files()
 
     print("Done!")
 
