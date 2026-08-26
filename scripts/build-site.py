@@ -222,7 +222,12 @@ def build_data():
             "question_count": total_questions,
         },
         "sections": sections,
-        "tags": sorted(all_tags),
+        # sorted() by key=str, because an unquoted numeric tag in the YAML
+        # (502, 404, 8080 are all plausible here) parses as an int and makes
+        # this comparison raise. That broke every Pages deploy from 2026-08-01
+        # to 2026-08-26 while the site kept serving the last good build, so the
+        # failure was invisible from the outside.
+        "tags": sorted(all_tags, key=str),
         "drills": drills,
         "quizzes": quizzes,
     }

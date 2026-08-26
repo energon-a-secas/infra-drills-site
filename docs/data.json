@@ -1,9 +1,9 @@
 {
   "meta": {
-    "generated_at": "2026-02-25T12:46:33.735314+00:00",
-    "drill_count": 31,
-    "quiz_count": 12,
-    "question_count": 96
+    "generated_at": "2026-08-26T22:58:27.940125+00:00",
+    "drill_count": 44,
+    "quiz_count": 16,
+    "question_count": 124
   },
   "sections": [
     {
@@ -20,9 +20,15 @@
       "id": "kubernetes",
       "label": "Kubernetes",
       "color": "#326CE5"
+    },
+    {
+      "id": "triage",
+      "label": "Triage",
+      "color": "#888888"
     }
   ],
   "tags": [
+    "502",
     "access-modes",
     "api-gateway",
     "artifacts",
@@ -30,45 +36,63 @@
     "autoscaling",
     "basics",
     "batch-operations",
+    "before-script",
+    "bisect",
     "bucket-policy",
     "build-output",
     "cache",
     "ci-commit-ref-slug",
+    "ci-pipeline-id",
     "cloudformation",
+    "comparison",
+    "config-registry",
     "configmap",
     "configuration",
     "console",
     "container-creating",
+    "containerPort",
     "cors",
     "crashloopbackoff",
+    "cross-namespace",
     "cross-stack",
     "csi-driver",
     "dag",
     "default-deny",
     "delegation",
+    "deny",
     "dependencies",
     "deployment",
     "dind",
+    "discard",
     "dlq",
     "dns",
     "docker",
     "dynamodb",
     "encryption",
     "endpoints",
+    "engines",
+    "environment-diff",
     "event-source-mapping",
     "exports",
+    "extends",
     "external-id",
+    "filesystem",
     "forbidden",
+    "fqdn",
     "gitlab-ci",
+    "handler",
     "hello-world",
     "hosted-zone",
     "hpa",
     "http",
     "iam",
+    "image-pinning",
     "image-pull-backoff",
+    "incident-response",
     "ingress",
     "internet-gateway",
     "irsa",
+    "json",
     "kubectl",
     "labels",
     "lambda",
@@ -79,14 +103,22 @@
     "metrics-server",
     "minikube",
     "multi-stage",
+    "namespace",
+    "namespaces",
     "nat-gateway",
     "needs",
     "network-policy",
+    "networking",
     "nginx",
+    "node-latest",
     "node-modules",
     "nodeport",
+    "non-root",
     "only-except",
     "oomkilled",
+    "parameter-store",
+    "performance",
+    "permissions",
     "persistent-volume",
     "pipeline-validation",
     "pod-selector",
@@ -98,14 +130,18 @@
     "quoting",
     "rbac",
     "registry",
+    "regression",
     "resource-limits",
     "resource-requests",
     "role",
     "rolebinding",
+    "rollback",
     "rolling-update",
     "rollout-undo",
+    "round-robin",
     "route-table",
     "route53",
+    "rule-out",
     "rules",
     "s3",
     "secretKeyRef",
@@ -114,9 +150,12 @@
     "selectors",
     "service",
     "serviceaccount",
+    "shared-config",
     "special-characters",
     "sqs",
+    "ssm",
     "stages",
+    "stale-config",
     "statefulset",
     "sts",
     "subnet",
@@ -124,10 +163,13 @@
     "timeout",
     "troubleshooting",
     "typo",
+    "validation",
     "variables",
+    "verify-assumptions",
     "volume-mount",
     "vpc",
     "vpc-endpoints",
+    "works-on-my-machine",
     "yaml"
   ],
   "drills": [
@@ -500,7 +542,7 @@
         "k8s-00-tutorial"
       ],
       "description": "Deployment not responding — liveness probe configured on wrong port causes repeated restarts.",
-      "readme": "# 🔎 Problem/Request\n\nA deployment is not responding to external requests, and the service appears to be unresponsive or inaccessible.\n\n* Context: The deployment was recently updated to accommodate changes in the application's network configuration. Since the update, external connectivity issues have arisen, causing service disruptions.\n* Hint: Examine the deployment and service definitions to ensure that all network configurations align correctly.\n\n\n# 🧪 Validation\n\nTo validate the solution, verify that the application responds correctly to network requests. Use the following command to test connectivity:\n\n```\nkubectl port-forward svc/my-service 8080:80\ncurl localhost:8080\n```\n\nThis forwards the local port 8080 to the service port 80 and attempts a curl request. Ensure you receive a successful response from the application.\n\n💉 Solution\n",
+      "readme": "# 🔎 Problem/Request\n\nA deployment stopped responding to requests. The service is unreachable.\n\n* Context: The deployment was recently updated to change the application's port configuration. Since the update, the service no longer accepts connections.\n* Hint: Compare the port numbers in the deployment, service, and container definitions.\n\n\n# 🧪 Validation\n\nVerify the application responds to requests:\n\n```\nkubectl port-forward svc/my-service 8080:80\ncurl localhost:8080\n```\n\nThis forwards local port 8080 to the service port 80. You should receive a successful response.\n\n💉 [Solution](../solutions/k8s-01-deployment-not-starting.md)\n",
       "solution": "# Deployment Not Starting Solution\n\n## The Issue\n\nThe deployment `faulty-deployment` uses an `nginx` container that listens on port **80**, but both the liveness probe and readiness probe are configured to send HTTP health checks to port **8080**. Since nothing is listening on port 8080 inside the container, every probe fails immediately with a \"connection refused\" error. Kubernetes interprets repeated liveness probe failures as the container being unhealthy and kills it, while readiness probe failures prevent the pod from receiving traffic. The result is a pod stuck in a `CrashLoopBackOff` cycle -- it starts, fails health checks, gets killed, restarts, and repeats.\n\n## Solution\n\nChange both probes to target port **80**, which is the port nginx actually listens on:\n\n```yaml\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: faulty-deployment\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: faulty-app\n  template:\n    metadata:\n      labels:\n        app: faulty-app\n    spec:\n      containers:\n      - name: example-app\n        image: nginx\n        ports:\n        - containerPort: 80\n        readinessProbe:\n          httpGet:\n            path: /\n            port: 80          # Was 8080 -- must match containerPort\n          initialDelaySeconds: 15\n          periodSeconds: 10\n        livenessProbe:\n          httpGet:\n            path: /\n            port: 80          # Was 8080 -- must match containerPort\n          initialDelaySeconds: 15\n          periodSeconds: 10\n```\n\nApply the corrected manifest:\n\n```bash\nkubectl apply -f template.yaml\n```\n\n## Diagnosis Walkthrough\n\nWhen you encounter a deployment that is not starting, here is the step-by-step diagnosis process:\n\n### 1. Check Deployment Status\n\n```bash\nkubectl get deployments\n```\n\nLook for `READY 0/1` or `AVAILABLE 0`, which indicates pods are not becoming ready.\n\n### 2. Check Pod Status\n\n```bash\nkubectl get pods -l app=faulty-app\n```\n\nYou will likely see one of these statuses:\n- `CrashLoopBackOff` -- the container keeps restarting after probe failures\n- `Running` but `0/1 READY` -- readiness probe is failing so the pod never becomes ready\n\n### 3. Describe the Pod for Events\n\n```bash\nkubectl describe pod -l app=faulty-app\n```\n\nIn the `Events` section at the bottom, look for lines like:\n\n```\nWarning  Unhealthy  Liveness probe failed: Get \"http://10.244.0.5:8080/\": dial tcp 10.244.0.5:8080: connect: connection refused\nWarning  Unhealthy  Readiness probe failed: Get \"http://10.244.0.5:8080/\": dial tcp 10.244.0.5:8080: connect: connection refused\n```\n\nThe key clue is `connection refused` on port `8080`. This tells you nothing is listening on that port inside the container.\n\n### 4. Check Container Logs\n\n```bash\nkubectl logs -l app=faulty-app --previous\n```\n\nThe `--previous` flag shows logs from the last terminated container (useful when the container keeps restarting). For nginx, the logs will show it started successfully on port 80, confirming the container itself is healthy -- only the probe configuration is wrong.\n\n### 5. Verify What Port the Container Listens On\n\nIf you are unsure which port the application uses, you can exec into a running container:\n\n```bash\nkubectl exec -it <pod-name> -- ss -tlnp\n```\n\nOr for containers without `ss`:\n\n```bash\nkubectl exec -it <pod-name> -- cat /etc/nginx/conf.d/default.conf\n```\n\nThis will show nginx is configured to `listen 80`.\n\n## Understanding Liveness and Readiness Probes\n\n### Liveness Probe\n\nThe liveness probe tells Kubernetes whether the container is **alive**. If the liveness probe fails for the configured number of consecutive times (`failureThreshold`, default 3), Kubernetes kills the container and restarts it according to the pod's `restartPolicy`.\n\nUse cases for liveness probes:\n- Detecting deadlocked applications that are running but not responding\n- Catching unrecoverable states where a restart would fix the problem\n\n### Readiness Probe\n\nThe readiness probe tells Kubernetes whether the container is **ready to serve traffic**. If the readiness probe fails, the pod is removed from the Service endpoints -- it stops receiving traffic but is not killed.\n\nUse cases for readiness probes:\n- Waiting for the application to finish loading data or caches\n- Temporarily removing a pod from rotation during heavy load or maintenance\n\n### Startup Probe\n\nKubernetes also offers a **startup probe** (not used in this drill). It runs only during container startup and disables liveness/readiness checks until it succeeds. This is useful for slow-starting applications where you need a long startup window but want aggressive liveness checks after startup.\n\n### Probe Configuration Fields\n\n| Field | Default | Description |\n|---|---|---|\n| `initialDelaySeconds` | 0 | Seconds to wait before the first probe |\n| `periodSeconds` | 10 | How often to run the probe |\n| `timeoutSeconds` | 1 | Seconds before the probe times out |\n| `successThreshold` | 1 | Consecutive successes to be considered healthy |\n| `failureThreshold` | 3 | Consecutive failures before taking action |\n\n## Testing\n\n1. Apply the broken template to observe the failure:\n\n```bash\nkubectl apply -f template.yaml\nkubectl get pods -l app=faulty-app -w\n```\n\nWatch for the pod entering `CrashLoopBackOff` or showing `0/1 READY`.\n\n2. Confirm the probe failure:\n\n```bash\nkubectl describe pod -l app=faulty-app | grep -A 5 \"Liveness\\|Readiness\"\n```\n\n3. Fix the template by changing both probe ports from `8080` to `80`, then reapply:\n\n```bash\nkubectl apply -f template.yaml\n```\n\n4. Watch the pod become ready:\n\n```bash\nkubectl get pods -l app=faulty-app -w\n```\n\nYou should see the pod transition to `1/1 Running`.\n\n5. Verify the application is serving traffic:\n\n```bash\nkubectl port-forward deployment/faulty-deployment 8080:80\ncurl http://localhost:8080\n```\n\nYou should receive the default nginx welcome page HTML.\n\n6. (Optional) Create a Service and validate end-to-end:\n\n```bash\nkubectl expose deployment faulty-deployment --port=80 --target-port=80 --type=NodePort\nminikube service faulty-deployment --url\n```\n\n## Common Mistakes\n\n1. **Probe port does not match containerPort** -- This is the exact bug in this drill. The probe must target the port where the application is actually listening, not an arbitrary port\n2. **Confusing Service port with container port in probes** -- Probes run inside the pod network, directly against the container. They have nothing to do with the Service port or NodePort. Always use the `containerPort` value\n3. **Setting `initialDelaySeconds` too low** -- If the application takes time to start (e.g., a Java app with Spring Boot), the probe may fail during startup before the app is ready. Increase `initialDelaySeconds` or use a startup probe instead\n4. **Using the wrong probe path** -- The health check endpoint must return an HTTP 2xx or 3xx status code. If your app serves `/healthz` but the probe is configured for `/health`, the probe will get a 404 and fail\n5. **Only fixing the liveness probe but not the readiness probe** -- Both probes in this template are misconfigured. Fixing only one will still result in problems: fixing liveness alone means the pod will not enter the Ready state and will not receive traffic\n6. **Not checking the application image documentation** -- Official images like `nginx`, `httpd`, and `node` have well-documented default ports. Always check the image documentation before writing probes\n\n## Additional Resources\n\n- [Configure Liveness, Readiness and Startup Probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)\n- [Pod Lifecycle](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/)\n- [Debugging Pods](https://kubernetes.io/docs/tasks/debug/debug-application/debug-pods/)\n- [Container Probes Reference](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#Probe)\n- [Kubernetes Health Checks Best Practices](https://cloud.google.com/blog/products/containers-kubernetes/kubernetes-best-practices-setting-up-health-checks-with-readiness-and-liveness-probes)\n",
       "files": [
         {
@@ -904,21 +946,6 @@
       "solution": "# gitlab-00-tutorial\n\n## The Issue\nThis is a tutorial — no issue to debug. Just run `gitlab-ci-local` to see the pipeline execute.\n\n## Solution\n```bash\ngitlab-ci-local\n```\n\n## Understanding\nGitLab CI/CD pipelines are defined in `.gitlab-ci.yml` files. The `gitlab-ci-local` tool lets you run them locally without a GitLab instance.\n\n## Additional Resources\n- [gitlab-ci-local](https://github.com/firecow/gitlab-ci-local)\n- [GitLab CI/CD Documentation](https://docs.gitlab.com/ee/ci/)\n",
       "files": [
         {
-          "name": ".gitlab-ci-local/builds/.docker/.gitlab-ci.yml",
-          "language": "yaml",
-          "content": "build-hello:\n  script:\n    - echo \"hello world\""
-        },
-        {
-          "name": ".gitlab-ci-local/expanded-gitlab-ci.yml",
-          "language": "yaml",
-          "content": "stages:\n  - .pre\n  - build\n  - test\n  - deploy\n  - .post\nbuild-hello:\n  script:\n    - echo \"hello world\"\ndefault: {}\n"
-        },
-        {
-          "name": ".gitlab-ci-local/state.yml",
-          "language": "yaml",
-          "content": "---\npipelineIid: 0\n"
-        },
-        {
           "name": ".gitlab-ci.yml",
           "language": "yaml",
           "content": "build-hello:\n  script:\n    - echo \"hello world\""
@@ -1086,6 +1113,385 @@
           "content": "#!/usr/bin/env bash\nset -euo pipefail\n\n# Lab initialization for gitlab-10-dependency-failure\n# Run gitlab-ci-local from this directory\n\necho \"Run 'gitlab-ci-local' to execute the pipeline.\"\n"
         }
       ]
+    },
+    {
+      "name": "triage-01-api-502-gateway",
+      "section": "triage",
+      "service": "aws",
+      "difficulty": "intermediate",
+      "tags": [
+        "lambda",
+        "handler",
+        "api-gateway",
+        "502",
+        "incident-response"
+      ],
+      "status": "complete",
+      "prerequisites": [
+        "lambda-01-timeout-configuration"
+      ],
+      "description": "Ticket: API returns 502 Bad Gateway, \"nothing changed\". Lambda handler name was changed to wrong value.",
+      "readme": "## Ticket\n\n**From:** Backend Team Lead\n**Priority:** High\n**Subject:** API returning 502 since this morning\n\n> Our /status endpoint started returning 502 Bad Gateway around 9 AM.\n> We haven't deployed anything new. The Lambda function was working fine\n> yesterday. Customers are affected — please investigate ASAP.\n>\n> API URL: https://api.example.com/status\n> Lambda: status-checker\n>\n> We checked CloudWatch and the function doesn't seem to be invoked at all.\n\n### What You Know\n\n- The API is served through API Gateway backed by a Lambda function.\n- The team says nothing changed. (They always say that.)\n- The Lambda function \"status-checker\" exists in LocalStack.\n- The function worked correctly before.\n\n### Your Task\n\n1. Find out why the API returns 502.\n2. Identify what changed.\n3. Fix the root cause.\n\n## Lab Setup\n\n```bash\ncd triage-01-api-502-gateway\nbash lab-initialization.sh\n```\n\n## Validation\n\n```bash\nawslocal lambda invoke --function-name status-checker --payload '{}' /tmp/response.json && cat /tmp/response.json\n```\n\nThe function should return a 200 response with a status message.\n\n## [Solution](../solutions/triage-01-api-502-gateway.md)\n",
+      "solution": "# Triage 01: API 502 Bad Gateway\n\n## Root Cause\n\nThe Lambda handler is set to `index.main`, but the function defines `handler`. The function deploys without error, but the runtime fails on every invocation because it cannot find the entry point `main`.\n\nThe \"nothing changed\" claim is false — someone updated the function configuration (likely during a deploy or a manual fix) and introduced a typo in the handler name.\n\n## Diagnostic Path\n\n### 1. Check if the function exists\n\n```bash\nawslocal lambda get-function --function-name status-checker\n```\n\nThe function exists. Nothing obviously wrong here.\n\n### 2. Try invoking the function directly\n\n```bash\nawslocal lambda invoke --function-name status-checker --payload '{}' /tmp/response.json && cat /tmp/response.json\n```\n\nThe response contains an error: `\"Handler 'index.main' missing on module 'index'\"` or a similar runtime import error. This is the key clue.\n\n### 3. Check the function configuration\n\n```bash\nawslocal lambda get-function-configuration --function-name status-checker\n```\n\nLook at the `Handler` field. It says `index.main`. Python Lambda handlers follow the format `module.function_name`. The module is `index` (from `index.py`), but the function is `handler`, not `main`.\n\n### 4. Check CloudWatch logs (if available)\n\n```bash\nawslocal logs filter-log-events --log-group-name /aws/lambda/status-checker\n```\n\nLogs would show the import/handler error on each invocation attempt.\n\n## Solution\n\nFix the handler name:\n\n```bash\nawslocal lambda update-function-configuration \\\n    --function-name status-checker \\\n    --handler index.handler\n```\n\nVerify:\n\n```bash\nawslocal lambda invoke --function-name status-checker --payload '{}' /tmp/response.json && cat /tmp/response.json\n```\n\nShould return:\n\n```json\n{\n    \"statusCode\": 200,\n    \"body\": \"{\\\"status\\\": \\\"healthy\\\", \\\"service\\\": \\\"status-checker\\\", \\\"version\\\": \\\"1.2.0\\\"}\"\n}\n```\n\n## What to Suspect When You See 502\n\nA 502 Bad Gateway from API Gateway + Lambda usually means:\n\n1. **Lambda failed to execute** — handler error, import error, or runtime crash\n2. **Lambda timed out** — execution exceeded the configured timeout\n3. **Lambda returned an invalid response** — missing statusCode, wrong format for proxy integration\n4. **Permission issue** — API Gateway cannot invoke the Lambda function\n\nThe first diagnostic step is always: invoke the function directly, bypassing API Gateway. If direct invocation fails, the problem is in the function. If direct invocation works but the API still returns 502, the problem is in the API Gateway integration.\n\n## Triage Lessons\n\n- **\"Nothing changed\" is almost never true.** Someone deployed, updated a config, or a dependency shifted. Always verify by checking recent changes, deployment history, or CloudTrail events.\n- **Start by reproducing the failure.** Before theorizing, invoke the function directly and read the actual error.\n- **Check the function configuration, not just the code.** Handler name, runtime version, timeout, memory, environment variables — any of these can break a working function without touching the code.\n\n## Common Mistakes\n\n1. **Assuming the code is wrong** — The code is fine. The configuration points to the wrong entry point.\n2. **Redeploying the same code** — If the handler name is wrong in the deployment config, redeploying just recreates the same problem.\n3. **Only checking API Gateway** — The 502 originates from the Lambda failure, not from API Gateway misconfiguration.\n4. **Not reading the invocation error** — The error message explicitly says which handler is missing.\n",
+      "files": [
+        {
+          "name": "lab-initialization.sh",
+          "language": "bash",
+          "content": "#!/bin/bash\n# Triage 01: API 502 Bad Gateway\n# Sets up a Lambda with a wrong handler name to simulate a \"nothing changed\" incident.\n\nawslocal lambda create-function \\\n    --function-name status-checker \\\n    --runtime python3.12 \\\n    --handler index.main \\\n    --role arn:aws:iam::000000000000:role/lambda-role \\\n    --zip-file fileb://function.zip 2>/dev/null\n\n# Create the function code zip\nTMPDIR=$(mktemp -d)\ncat > \"$TMPDIR/index.py\" << 'EOF'\nimport json\n\ndef handler(event, context):\n    return {\n        \"statusCode\": 200,\n        \"body\": json.dumps({\n            \"status\": \"healthy\",\n            \"service\": \"status-checker\",\n            \"version\": \"1.2.0\"\n        })\n    }\nEOF\n\ncd \"$TMPDIR\" && zip -q function.zip index.py && cd - > /dev/null\n\n# Create the function with WRONG handler (index.main instead of index.handler)\nawslocal lambda delete-function --function-name status-checker 2>/dev/null\n\nawslocal lambda create-function \\\n    --function-name status-checker \\\n    --runtime python3.12 \\\n    --handler index.main \\\n    --role arn:aws:iam::000000000000:role/lambda-role \\\n    --zip-file \"fileb://$TMPDIR/function.zip\"\n\nrm -rf \"$TMPDIR\"\n\necho \"\"\necho \"Lab initialized. The status-checker Lambda is deployed.\"\necho \"Ticket says: API returns 502, nothing changed.\"\necho \"\"\necho \"Start investigating!\"\n"
+        }
+      ]
+    },
+    {
+      "name": "triage-02-app-crash-after-rollback",
+      "section": "triage",
+      "service": "k8s",
+      "difficulty": "intermediate",
+      "tags": [
+        "rollback",
+        "configmap",
+        "crashloopbackoff",
+        "incident-response"
+      ],
+      "status": "complete",
+      "prerequisites": [
+        "k8s-03-configmap-mount-failure"
+      ],
+      "description": "Ticket: App still crashing after rollback. Rolled-back version depends on a ConfigMap that was deleted.",
+      "readme": "## Ticket\n\n**From:** On-call Engineer\n**Priority:** Critical\n**Subject:** App still crashing after rollback\n\n> We deployed v2.0.0 of the payments service 30 minutes ago. It started\n> crash-looping immediately, so we ran kubectl rollout undo. The rollback\n> \"succeeded\" according to kubectl, but the pods are still crashing.\n>\n> We're stuck. The previous version (v1.0.0) was running fine for weeks.\n> The rollback should have fixed everything.\n>\n> Namespace: default\n> Deployment: payments-api\n\n### What You Know\n\n- The deployment uses an nginx-based container.\n- Version v2.0.0 was deployed and immediately failed.\n- The team ran `kubectl rollout undo deployment/payments-api`.\n- Pods are still in CrashLoopBackOff after the rollback.\n\n### Your Task\n\n1. Determine why the rollback did not fix the problem.\n2. Find the actual root cause of the crash.\n3. Get the deployment running.\n\n## Lab Setup\n\n```bash\ncd triage-02-app-crash-after-rollback\nbash lab-initialization.sh\n```\n\n## Validation\n\n```bash\nkubectl get pods -l app=payments-api\n```\n\nThe pod should show `Running` with `1/1` ready and zero recent restarts.\n\n## [Solution](../solutions/triage-02-app-crash-after-rollback.md)\n",
+      "solution": "# Triage 02: App Crash After Rollback\n\n## Root Cause\n\nTwo failures caused the crash:\n\n1. **The v2.0.0 deploy used a non-existent image** — this caused the initial CrashLoopBackOff (ImagePullBackOff).\n2. **The ConfigMap `payments-config` was deleted** between the deploy and the rollback — possibly by a cleanup script, another team member, or a separate change.\n\nThe rollback reverted the image back to v1.0.0 (nginx:1.25), which is correct. But v1.0.0 mounts `payments-config` via `envFrom.configMapRef`. Since the ConfigMap no longer exists, the pod cannot start — Kubernetes blocks container creation when a required ConfigMap is missing.\n\nThe team assumed the rollback restored everything to the previous state. It restored the Deployment spec, but not the cluster resources the Deployment depends on.\n\n## Diagnostic Path\n\n### 1. Check pod status\n\n```bash\nkubectl get pods -l app=payments-api\n```\n\nPods show `CreateContainerConfigError` or `CrashLoopBackOff`.\n\n### 2. Describe the pod\n\n```bash\nkubectl describe pod -l app=payments-api\n```\n\nEvents section shows:\n```\nWarning  Failed  configmap \"payments-config\" not found\n```\n\nThis is the key clue — the pod depends on a ConfigMap that does not exist.\n\n### 3. Check the deployment spec\n\n```bash\nkubectl get deployment payments-api -o yaml | grep -A 5 envFrom\n```\n\nThe spec references `configMapRef: name: payments-config`.\n\n### 4. Verify the ConfigMap is missing\n\n```bash\nkubectl get configmap payments-config\n```\n\nReturns `Error from server (NotFound)`. The ConfigMap was deleted.\n\n### 5. Check rollout history\n\n```bash\nkubectl rollout history deployment/payments-api\n```\n\nShows two revisions. The rollback went to revision 1, which is the correct image — but the ConfigMap it depends on is gone.\n\n## Solution\n\nRecreate the missing ConfigMap:\n\n```bash\nkubectl create configmap payments-config \\\n    --from-literal=DB_HOST=postgres.default.svc \\\n    --from-literal=DB_PORT=5432\n```\n\nThe pod should start within seconds. Verify:\n\n```bash\nkubectl get pods -l app=payments-api\n```\n\nShould show `Running` with `1/1` ready.\n\n## What to Suspect When Rollbacks Fail\n\nA rollback only reverts the Deployment spec (image, env, volumes, etc.). It does not restore:\n\n- **ConfigMaps or Secrets** that were deleted or modified\n- **PersistentVolumeClaims** that were removed\n- **Services, Ingresses, or NetworkPolicies** that changed\n- **Database schemas** that were migrated forward\n- **External state** (feature flags, DNS records, certificates)\n\nWhen a rollback \"succeeds\" but pods still fail, check what the Deployment depends on outside its own spec.\n\n## Triage Lessons\n\n- **Rollbacks revert the Deployment spec, not the cluster state.** Deleted ConfigMaps, Secrets, and PVCs stay deleted.\n- **Read the pod events.** `kubectl describe pod` almost always tells you exactly what is wrong. In this case, \"configmap not found\" points directly to the root cause.\n- **Ask \"what else changed?\"** The ticket focuses on the deploy and rollback, but the real problem was a separate action (ConfigMap deletion) that happened in between.\n\n## Common Mistakes\n\n1. **Assuming the rollback is broken** — The rollback restored the Deployment spec correctly. The problem is in cluster resources the Deployment depends on, not in the spec itself.\n2. **Reapplying the entire Deployment YAML** — If you reapply the v1.0.0 manifest, you still have the same problem because the ConfigMap is missing.\n3. **Deleting and recreating the pod** — The new pod will fail for the same reason. The ConfigMap must exist first.\n4. **Not reading the pod events** — The error message explicitly says which ConfigMap is missing. Skipping `kubectl describe` means guessing when the answer is right there.\n",
+      "files": [
+        {
+          "name": "lab-initialization.sh",
+          "language": "bash",
+          "content": "#!/bin/bash\n# Triage 02: App crash after rollback\n# Simulates a rollback that \"succeeded\" but pods still crash because\n# the rolled-back version depends on a ConfigMap that was deleted.\n\n# Step 1: Create the ConfigMap that v1.0.0 depends on\nkubectl create configmap payments-config \\\n    --from-literal=DB_HOST=postgres.default.svc \\\n    --from-literal=DB_PORT=5432 \\\n    2>/dev/null\n\n# Step 2: Deploy v1.0.0 (working version that mounts the ConfigMap)\ncat <<'EOF' | kubectl apply -f -\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: payments-api\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: payments-api\n  template:\n    metadata:\n      labels:\n        app: payments-api\n    spec:\n      containers:\n      - name: app\n        image: nginx:1.25\n        ports:\n        - containerPort: 80\n        envFrom:\n        - configMapRef:\n            name: payments-config\n        resources:\n          limits:\n            memory: \"128Mi\"\n            cpu: \"100m\"\nEOF\n\n# Wait for v1.0.0 to be ready\necho \"Deploying v1.0.0 (working baseline)...\"\nkubectl rollout status deployment/payments-api --timeout=60s 2>/dev/null\n\n# Step 3: \"Deploy v2.0.0\" — update to a non-existent image to simulate the bad deploy\nkubectl set image deployment/payments-api app=nginx:99.99.99-does-not-exist\n\n# Wait briefly for the bad rollout to start\nsleep 3\n\n# Step 4: Delete the ConfigMap (simulates a separate cleanup that happened between deploys)\nkubectl delete configmap payments-config 2>/dev/null\n\n# Step 5: Rollback — this reverts the image but the ConfigMap is gone\nkubectl rollout undo deployment/payments-api 2>/dev/null\n\necho \"\"\necho \"Lab initialized.\"\necho \"Ticket says: Rollback succeeded but pods are still crashing.\"\necho \"\"\necho \"Start investigating!\"\n"
+        }
+      ]
+    },
+    {
+      "name": "triage-03-pipeline-broke-overnight",
+      "section": "triage",
+      "service": "gitlab",
+      "difficulty": "intermediate",
+      "tags": [
+        "image-pinning",
+        "node-latest",
+        "engines",
+        "incident-response"
+      ],
+      "status": "complete",
+      "prerequisites": [
+        "gitlab-01-cache-not-shared"
+      ],
+      "description": "Ticket: Pipeline broke overnight with no code changes. node:latest moved to a new major version.",
+      "readme": "## Ticket\n\n**From:** Frontend Developer\n**Priority:** Medium\n**Subject:** CI pipeline broke overnight — we didn't change anything\n\n> Our pipeline was green yesterday at 5 PM. This morning every build fails\n> in the install stage with \"npm ERR! engine Unsupported engine\". Nobody\n> pushed any commits overnight.\n>\n> We tried re-running the pipeline twice — same error both times.\n>\n> Pipeline: .gitlab-ci.yml in this directory\n> Error stage: install\n\n### What You Know\n\n- The project uses Node.js with a specific engine requirement in package.json.\n- The CI pipeline ran successfully yesterday.\n- No commits were pushed overnight.\n- The pipeline uses an image tag that may resolve to different versions over time.\n\n### Your Task\n\n1. Reproduce the failure by running the pipeline locally.\n2. Find why it broke without code changes.\n3. Fix the pipeline so it passes.\n\n## Lab Setup\n\nNo infrastructure needed — run directly with gitlab-ci-local.\n\n```bash\ncd triage-03-pipeline-broke-overnight\ngitlab-ci-local\n```\n\n## Validation\n\n```bash\ngitlab-ci-local\n# Both install and test stages should pass\n```\n\n## [Solution](../solutions/triage-03-pipeline-broke-overnight.md)\n",
+      "solution": "# Triage 03: Pipeline Broke Overnight\n\n## Root Cause\n\nThe pipeline uses `image: node:latest`. The `latest` tag points to whichever Node.js version Docker published most recently. Overnight, the Node.js Docker image updated from Node 20.x to Node 22.x (or a similar major bump).\n\nThe project's `package.json` specifies `\"engines\": {\"node\": \">=18.0.0 <21.0.0\"}`. When npm runs with `node:latest` now resolving to Node 22, `npm install` fails with \"Unsupported engine\" because 22 falls outside the allowed range.\n\nNo code changed. The Docker image tag resolved to a new version overnight.\n\n## Diagnostic Path\n\n### 1. Run the pipeline and read the error\n\n```bash\ngitlab-ci-local\n```\n\nThe install stage fails. The error message says:\n```\nnpm ERR! engine Unsupported engine\nnpm ERR! notsup Not compatible with your version of node/npm\nnpm ERR! notsup Required: {\"node\":\">=18.0.0 <21.0.0\"}\nnpm ERR! notsup Actual:   {\"node\":\"v22.x.x\",\"npm\":\"10.x.x\"}\n```\n\n### 2. Check what image the pipeline uses\n\nOpen `.gitlab-ci.yml`. Both jobs use `image: node:latest`.\n\n### 3. Check the engine constraint\n\nOpen `package.json`. The `engines` field requires Node `>=18.0.0 <21.0.0`.\n\n### 4. Connect the dots\n\n`node:latest` resolved to Node 22 (outside the allowed range). Yesterday it resolved to Node 20 (inside the range). The tag moved but the code stayed the same.\n\n## Solution\n\nPin the Node.js image to a specific major version:\n\n```yaml\nstages:\n  - install\n  - test\n\ninstall_deps:\n  stage: install\n  image: node:20\n  script:\n    - node --version\n    - npm install\n  cache:\n    key: $CI_COMMIT_REF_SLUG\n    paths:\n      - node_modules/\n\nrun_tests:\n  stage: test\n  image: node:20\n  script:\n    - npm test\n  cache:\n    key: $CI_COMMIT_REF_SLUG\n    paths:\n      - node_modules/\n```\n\nChange `image: node:latest` to `image: node:20` (or `node:20-alpine` for a smaller image). This pins to the Node 20 major version while still receiving patch updates.\n\nAlternatively, update the `engines` field in `package.json` to accept Node 22 if the application supports it:\n\n```json\n\"engines\": {\n  \"node\": \">=18.0.0 <23.0.0\"\n}\n```\n\nThe first option (pinning the image) is safer because it keeps the runtime predictable.\n\n## What to Suspect When \"Nothing Changed\"\n\nWhen pipelines break without code changes, check the environment:\n\n1. **Docker image tags moved** — `latest`, `lts`, `stable` resolve to new versions overnight\n2. **Dependencies updated** — unpinned packages (`^1.0.0`) pulled a breaking minor/patch release\n3. **Runner infrastructure changed** — shared runners updated their base image or Docker version\n4. **Certificates or tokens expired** — TLS certs, API keys, or CI variables have expiration dates\n5. **External services changed** — an API endpoint the build depends on changed its response format\n\n## Triage Lessons\n\n- **Never use `:latest` in CI pipelines.** Pin to a specific major version (`node:20`, `python:3.12`, `ruby:3.3`). The `latest` tag is convenient for local development but dangerous in CI.\n- **Read the full error message.** \"Unsupported engine\" + the required vs actual versions tells you everything. The fix is clear once you compare the two version numbers.\n- **Check the `engines` field.** Many Node.js projects set engine constraints. When the runtime version changes, npm enforces the constraint and fails fast.\n\n## Common Mistakes\n\n1. **Rerunning the pipeline** — If the image tag still points to the new version, rerunning produces the same failure. This is why the team tried twice and got the same error.\n2. **Removing the `engines` field** — This masks the problem. The app may have real incompatibilities with the newer Node version. The engine constraint exists for a reason.\n3. **Pinning to an exact patch version** — `node:20.11.1` is too specific and misses security patches. Pin to the major version (`node:20`) for the right balance.\n4. **Only fixing one job** — Both `install_deps` and `run_tests` use `node:latest`. Fix both, or extract the image into a default or variable.\n",
+      "files": [
+        {
+          "name": ".gitlab-ci.yml",
+          "language": "yaml",
+          "content": "stages:\n  - install\n  - test\n\ninstall_deps:\n  stage: install\n  image: node:latest\n  script:\n    - node --version\n    - npm install\n  cache:\n    key: $CI_COMMIT_REF_SLUG\n    paths:\n      - node_modules/\n\nrun_tests:\n  stage: test\n  image: node:latest\n  script:\n    - npm test\n  cache:\n    key: $CI_COMMIT_REF_SLUG\n    paths:\n      - node_modules/\n"
+        },
+        {
+          "name": "package.json",
+          "language": "json",
+          "content": "{\n  \"name\": \"frontend-app\",\n  \"version\": \"1.0.0\",\n  \"description\": \"Frontend application\",\n  \"main\": \"index.js\",\n  \"engines\": {\n    \"node\": \">=18.0.0 <21.0.0\"\n  },\n  \"scripts\": {\n    \"test\": \"node -e \\\"console.log('Tests passed')\\\"\"\n  },\n  \"dependencies\": {}\n}\n"
+        }
+      ]
+    },
+    {
+      "name": "triage-04-s3-access-denied-policy",
+      "section": "triage",
+      "service": "aws",
+      "difficulty": "intermediate",
+      "tags": [
+        "s3",
+        "bucket-policy",
+        "encryption",
+        "deny",
+        "incident-response"
+      ],
+      "status": "complete",
+      "prerequisites": [
+        "s3-01-bucket-does-not-appear"
+      ],
+      "description": "Ticket: S3 uploads fail with Access Denied after security team updated bucket policy to require encryption.",
+      "readme": "## Ticket\n\n**From:** Mobile Team\n**Priority:** High\n**Subject:** S3 uploads broken after security update\n\n> Since yesterday's security review, all file uploads from our mobile app\n> fail with \"Access Denied\". The IAM user has full S3 permissions. We also\n> tested with the CLI and get the same error.\n>\n> The security team updated the bucket policy yesterday as part of a\n> compliance audit. They said it was a \"minor tightening\" and shouldn't\n> affect anything.\n>\n> Bucket: secure-uploads\n> IAM user has: s3:PutObject, s3:GetObject, s3:ListBucket\n\n### What You Know\n\n- Uploads worked before the bucket policy change.\n- The IAM user permissions have not changed.\n- The security team updated the bucket policy \"to enforce encryption\".\n- Both CLI and app uploads fail with Access Denied.\n\n### Your Task\n\n1. Find what the security team changed.\n2. Understand why uploads fail despite having s3:PutObject permission.\n3. Fix the upload command (the policy is correct and should stay).\n\n## Lab Setup\n\n```bash\ncd triage-04-s3-access-denied-policy\nbash lab-initialization.sh\n```\n\n## Validation\n\n```bash\n# This should succeed after your fix:\nawslocal s3api put-object --bucket secure-uploads --key test.txt --body test.txt --server-side-encryption AES256\n```\n\n## [Solution](../solutions/triage-04-s3-access-denied-policy.md)\n",
+      "solution": "# Triage 04: S3 Access Denied After Policy Change\n\n## Root Cause\n\nThe security team added a bucket policy with an explicit **Deny** on `s3:PutObject` when the request lacks the `s3:x-amz-server-side-encryption: AES256` header. This is a valid compliance pattern — it forces all uploads to use server-side encryption.\n\nThe IAM user has `s3:PutObject` permission, but explicit Deny in a bucket policy always overrides Allow in IAM policies. Every upload without the `--server-side-encryption AES256` flag hits the Deny rule and returns Access Denied.\n\nThe policy is correct. The uploads need to include the encryption header.\n\n## Diagnostic Path\n\n### 1. Reproduce the failure\n\n```bash\nawslocal s3api put-object --bucket secure-uploads --key test.txt --body test.txt\n```\n\nReturns Access Denied.\n\n### 2. Read the bucket policy\n\n```bash\nawslocal s3api get-bucket-policy --bucket secure-uploads --output text | python3 -m json.tool\n```\n\nThe policy shows a Deny statement with condition `StringNotEquals` on `s3:x-amz-server-side-encryption`. This means: deny any PutObject that does NOT include the AES256 encryption header.\n\n### 3. Test with the encryption header\n\n```bash\nawslocal s3api put-object --bucket secure-uploads --key test.txt --body test.txt --server-side-encryption AES256\n```\n\nThis succeeds. The policy is working as designed.\n\n## Solution\n\nAdd `--server-side-encryption AES256` to all upload commands:\n\n```bash\nawslocal s3api put-object \\\n    --bucket secure-uploads \\\n    --key test.txt \\\n    --body test.txt \\\n    --server-side-encryption AES256\n```\n\nFor applications, set the `x-amz-server-side-encryption: AES256` header on every PUT request to S3.\n\n## Understanding Explicit Deny\n\nAWS evaluates policies in this order:\n\n1. **Explicit Deny** — if any policy says Deny, the request is denied. Full stop.\n2. **Explicit Allow** — if no Deny exists and any policy says Allow, the request is allowed.\n3. **Implicit Deny** — if nothing says Allow, the request is denied by default.\n\nThe IAM user has Allow for `s3:PutObject`. But the bucket policy has Deny for PutObject without encryption. Deny wins over Allow regardless of where the Allow comes from.\n\n## Triage Lessons\n\n- **\"Minor tightening\" can break everything.** A bucket policy with Deny overrides all IAM permissions. The security team's change was correct but its impact was not communicated.\n- **Check bucket policies early.** When S3 returns Access Denied, check both IAM and bucket policies — IAM alone misses Deny conditions.\n- **Read the Deny conditions carefully.** `StringNotEquals` means \"deny when the header is NOT present or NOT equal to AES256\". This denies both missing headers and wrong encryption types.\n\n## Common Mistakes\n\n1. **Blaming IAM permissions** — The IAM user has the right permissions. The bucket policy overrides them.\n2. **Removing the bucket policy** — The policy enforces a compliance requirement. Removing it fixes uploads but creates a security gap.\n3. **Adding more IAM permissions** — Explicit Deny always overrides Allow, regardless of source.\n4. **Not reading the Condition block** — The Deny is conditional. Understanding the condition reveals exactly what the upload command needs.\n",
+      "files": [
+        {
+          "name": "bucket-policy.json",
+          "language": "json",
+          "content": "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Sid\": \"DenyUnencryptedUploads\",\n      \"Effect\": \"Deny\",\n      \"Principal\": \"*\",\n      \"Action\": \"s3:PutObject\",\n      \"Resource\": \"arn:aws:s3:::secure-uploads/*\",\n      \"Condition\": {\n        \"StringNotEquals\": {\n          \"s3:x-amz-server-side-encryption\": \"AES256\"\n        }\n      }\n    }\n  ]\n}\n"
+        },
+        {
+          "name": "lab-initialization.sh",
+          "language": "bash",
+          "content": "#!/bin/bash\n# Triage 04: S3 Access Denied after policy change\n# Bucket policy requires SSE encryption header on all PutObject requests.\n\nawslocal s3 mb s3://secure-uploads 2>/dev/null\n\n# Create a test file\necho \"test content\" > test.txt\n\n# Apply bucket policy that denies PutObject without encryption header\nawslocal s3api put-bucket-policy --bucket secure-uploads --policy file://bucket-policy.json\n\necho \"\"\necho \"Lab initialized. Bucket 'secure-uploads' is ready.\"\necho \"Ticket says: All uploads fail with Access Denied after security update.\"\necho \"\"\necho \"Try uploading:\"\necho \"  awslocal s3api put-object --bucket secure-uploads --key test.txt --body test.txt\"\necho \"\"\necho \"Start investigating!\"\n"
+        }
+      ]
+    },
+    {
+      "name": "triage-05-lambda-works-locally-not-prod",
+      "section": "triage",
+      "service": "aws",
+      "difficulty": "intermediate",
+      "tags": [
+        "lambda",
+        "vpc",
+        "nat-gateway",
+        "networking",
+        "incident-response"
+      ],
+      "status": "complete",
+      "prerequisites": [
+        "lambda-10-vpc-no-internet"
+      ],
+      "description": "Ticket: Lambda works via direct invoke but times out in production VPC. Private subnet has no NAT Gateway.",
+      "readme": "## Ticket\n\n**From:** Platform Engineer\n**Priority:** High\n**Subject:** Lambda works when I test it but times out in production\n\n> I wrote a Lambda function that calls the GitHub API to check repo stats.\n> When I test it with `awslocal lambda invoke`, it returns data perfectly.\n> But in production (where it's in a VPC), it always times out after 30s.\n>\n> I've increased the timeout to 60s. Same thing. The function code is\n> identical in both environments.\n>\n> Function: github-checker\n> Production VPC: Has a private subnet for Lambda\n\n### What You Know\n\n- The function makes an outbound HTTPS call to api.github.com.\n- It works outside a VPC (direct invoke in LocalStack).\n- It times out when placed inside a VPC with only a private subnet.\n- The timeout was already increased — it's not a timeout config issue.\n\n### Your Task\n\n1. Understand why a VPC Lambda cannot reach the internet.\n2. Identify what network component is missing.\n3. Explain the fix (conceptual — full NAT Gateway setup is in the related drill).\n\n## Lab Setup\n\n```bash\ncd triage-05-lambda-works-locally-not-prod\nbash lab-initialization.sh\n```\n\n## Validation\n\n```bash\n# Direct invoke should work (simulating non-VPC):\nawslocal lambda invoke --function-name github-checker --payload '{}' /tmp/response.json && cat /tmp/response.json\n```\n\nThe function should return a 200 with GitHub API data.\n\n## [Solution](../solutions/triage-05-lambda-works-locally-not-prod.md)\n",
+      "solution": "# Triage 05: Lambda Works Locally, Times Out in VPC\n\n## Root Cause\n\nA Lambda function in a VPC is placed in a private subnet. The subnet's route table has no route to the internet — no NAT Gateway, no VPC endpoint. When the function tries to call `api.github.com`, the TCP connection hangs until the Lambda timeout kills it.\n\nOutside a VPC, Lambda has direct internet access through AWS's managed networking. Inside a VPC, Lambda gets an ENI (Elastic Network Interface) in the specified subnet and follows that subnet's routing rules. A private subnet without a NAT Gateway has no path to the public internet.\n\n## Diagnostic Path\n\n### 1. Confirm the function works outside a VPC\n\n```bash\nawslocal lambda invoke --function-name github-checker --payload '{}' /tmp/response.json && cat /tmp/response.json\n```\n\nReturns 200 with GitHub data. The code is fine.\n\n### 2. Check VPC configuration\n\n```bash\nawslocal lambda get-function-configuration --function-name github-checker\n```\n\nIf the function were VPC-attached, you'd see a `VpcConfig` block with `SubnetIds` and `SecurityGroupIds`.\n\n### 3. Check the subnet's route table\n\n```bash\nawslocal ec2 describe-route-tables\n```\n\nThe private subnet's route table only has a local route (`10.0.0.0/16 -> local`). There is no `0.0.0.0/0` route pointing to a NAT Gateway or Internet Gateway.\n\n### 4. Confirm no NAT Gateway exists\n\n```bash\nawslocal ec2 describe-nat-gateways\n```\n\nReturns empty. No NAT Gateway is provisioned.\n\n## Solution\n\nFor a VPC Lambda to reach the internet, you need:\n\n1. **A public subnet** with an Internet Gateway attached\n2. **A NAT Gateway** in the public subnet\n3. **A route** in the private subnet's route table: `0.0.0.0/0 -> NAT Gateway`\n\n```bash\n# Create Internet Gateway\nIGW_ID=$(awslocal ec2 create-internet-gateway --query 'InternetGateway.InternetGatewayId' --output text)\nawslocal ec2 attach-internet-gateway --internet-gateway-id $IGW_ID --vpc-id $VPC_ID\n\n# Create public subnet\nPUBLIC_SUBNET=$(awslocal ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.2.0/24 --query 'Subnet.SubnetId' --output text)\n\n# Create NAT Gateway (needs an Elastic IP)\nEIP=$(awslocal ec2 allocate-address --query 'AllocationId' --output text)\nNAT_ID=$(awslocal ec2 create-nat-gateway --subnet-id $PUBLIC_SUBNET --allocation-id $EIP --query 'NatGateway.NatGatewayId' --output text)\n\n# Add route to private subnet's route table\nRT_ID=$(awslocal ec2 describe-route-tables --filters Name=association.subnet-id,Values=$PRIVATE_SUBNET --query 'RouteTables[0].RouteTableId' --output text)\nawslocal ec2 create-route --route-table-id $RT_ID --destination-cidr-block 0.0.0.0/0 --nat-gateway-id $NAT_ID\n```\n\nAlternative: Use a **VPC Endpoint** for specific AWS services (S3, DynamoDB, SQS) to avoid NAT Gateway costs. But for external APIs like GitHub, you need a NAT Gateway.\n\n## Why This Is Confusing\n\nThe mental model that trips people up:\n\n| Environment | Internet Access | Why |\n|-------------|----------------|-----|\n| Lambda **without** VPC | Yes | AWS manages networking, direct internet path |\n| Lambda **in VPC**, public subnet | **No** | Lambda ENIs never get public IPs, even in public subnets |\n| Lambda **in VPC**, private subnet + NAT | Yes | Traffic routes through NAT Gateway in the public subnet |\n\nPutting a Lambda in a **public** subnet does NOT give it internet access — Lambda ENIs never receive public IPs. You must route through a NAT Gateway regardless.\n\n## Triage Lessons\n\n- **\"It works locally\" usually means different network paths.** Local testing bypasses VPC networking. Always consider what network path the function uses in production.\n- **Timeouts on external calls point to network routing.** If the function code works and the timeout is generous, the connection is not reaching the destination. Check routing next.\n- **Timeout increases mask network problems.** If there is no route, the connection hangs regardless of timeout. A longer timeout just delays the error.\n\n## Common Mistakes\n\n1. **Putting Lambda in a public subnet** — Lambda ENIs never get public IPs. A public subnet alone does not help.\n2. **Increasing the timeout** — The team already tried this. The connection is not slow; it's blocked.\n3. **Blaming DNS** — DNS resolution may actually work (VPC has default DNS). The TCP connection to the resolved IP is what fails.\n4. **Removing VPC configuration** — This fixes the symptom but loses access to VPC resources (RDS, ElastiCache, etc.) that required VPC placement in the first place.\n\n## Related Drill\n\nSee [lambda-10-vpc-no-internet](../../aws/lambda-10-vpc-no-internet/) for the full hands-on lab with NAT Gateway setup.\n",
+      "files": [
+        {
+          "name": "lab-initialization.sh",
+          "language": "bash",
+          "content": "#!/bin/bash\n# Triage 05: Lambda works locally but not in VPC\n# Creates a Lambda that makes an external HTTP call.\n# In a real VPC private subnet without NAT, this would timeout.\n# LocalStack simulates the non-VPC version (which works).\n\nTMPDIR=$(mktemp -d)\ncat > \"$TMPDIR/index.py\" << 'PYEOF'\nimport json\nimport urllib.request\n\ndef handler(event, context):\n    url = \"https://api.github.com\"\n    try:\n        req = urllib.request.Request(url, headers={\"User-Agent\": \"lambda-checker\"})\n        with urllib.request.urlopen(req, timeout=10) as response:\n            data = json.loads(response.read().decode())\n            return {\n                \"statusCode\": 200,\n                \"body\": json.dumps({\n                    \"message\": \"GitHub API reachable\",\n                    \"current_user_url\": data.get(\"current_user_url\", \"unknown\")\n                })\n            }\n    except Exception as e:\n        return {\n            \"statusCode\": 500,\n            \"body\": json.dumps({\"error\": str(e)})\n        }\nPYEOF\n\ncd \"$TMPDIR\" && zip -q function.zip index.py && cd - > /dev/null\n\nawslocal lambda delete-function --function-name github-checker 2>/dev/null\n\nawslocal lambda create-function \\\n    --function-name github-checker \\\n    --runtime python3.12 \\\n    --handler index.handler \\\n    --timeout 30 \\\n    --role arn:aws:iam::000000000000:role/lambda-role \\\n    --zip-file \"fileb://$TMPDIR/function.zip\"\n\n# Create VPC resources to illustrate the scenario\nawslocal ec2 create-vpc --cidr-block 10.0.0.0/16 --output text --query 'Vpc.VpcId' > \"$TMPDIR/vpc-id\"\nVPC_ID=$(cat \"$TMPDIR/vpc-id\")\n\nawslocal ec2 create-subnet \\\n    --vpc-id \"$VPC_ID\" \\\n    --cidr-block 10.0.1.0/24 \\\n    --output text --query 'Subnet.SubnetId' > \"$TMPDIR/subnet-id\"\n\nSUBNET_ID=$(cat \"$TMPDIR/subnet-id\")\n\nrm -rf \"$TMPDIR\"\n\necho \"\"\necho \"Lab initialized.\"\necho \"  Function: github-checker (works via direct invoke)\"\necho \"  VPC: $VPC_ID (private subnet $SUBNET_ID, NO NAT Gateway)\"\necho \"\"\necho \"Ticket says: Works when I test it, times out in production VPC.\"\necho \"\"\necho \"Investigate why a VPC Lambda can't reach external APIs.\"\necho \"Hint: awslocal ec2 describe-route-tables --filters Name=vpc-id,Values=$VPC_ID\"\n"
+        }
+      ]
+    },
+    {
+      "name": "triage-06-service-intermittent-503",
+      "section": "triage",
+      "service": "k8s",
+      "difficulty": "intermediate",
+      "tags": [
+        "service",
+        "endpoints",
+        "containerPort",
+        "round-robin",
+        "incident-response"
+      ],
+      "status": "complete",
+      "prerequisites": [
+        "k8s-04-service-selector-mismatch"
+      ],
+      "description": "Ticket: Service returns 503 randomly. Two replicas but one has wrong containerPort declaration.",
+      "readme": "## Ticket\n\n**From:** QA Engineer\n**Priority:** Medium\n**Subject:** Service returns 503 randomly — works sometimes, fails sometimes\n\n> Our frontend-api service is flaky. About half the requests return 200\n> and the other half return 503 Service Unavailable. Refreshing the page\n> sometimes works, sometimes doesn't.\n>\n> We have 2 replicas running. Both pods show \"Running\" in kubectl.\n> This started after we scaled from 1 to 2 replicas yesterday.\n>\n> Namespace: default\n> Service: frontend-api\n\n### What You Know\n\n- The service has 2 replicas.\n- Scaling from 1 to 2 replicas triggered the issue.\n- Both pods appear to be Running.\n- Approximately 50% of requests fail — consistent with round-robin load balancing across 2 pods.\n\n### Your Task\n\n1. Determine which pod is causing the 503 errors.\n2. Find why one replica is unhealthy while still showing \"Running\".\n3. Fix the issue.\n\n## Lab Setup\n\n```bash\ncd triage-06-service-intermittent-503\nbash lab-initialization.sh\n```\n\n## Validation\n\n```bash\n# Port-forward and test multiple times — all should return 200:\nkubectl port-forward svc/frontend-api 8080:80 &\nfor i in $(seq 1 6); do curl -s -o /dev/null -w \"%{http_code}\\n\" http://localhost:8080; done\nkill %1 2>/dev/null\n```\n\nAll 6 requests should return 200.\n\n## [Solution](../solutions/triage-06-service-intermittent-503.md)\n",
+      "solution": "# Triage 06: Service Intermittent 503\n\n## Root Cause\n\nTwo Deployments serve the same Service via the shared label `app: frontend-api`. One pod declares `containerPort: 80` (correct — matches nginx), the other declares `containerPort: 9090` (wrong — nginx still listens on 80).\n\nBoth pods are Running and Ready. Without a readiness probe, Kubernetes cannot detect the port mismatch. The Service selects both pods and creates endpoints for both. When traffic hits the good pod, it returns 200. When it hits the bad pod, nothing listens on port 9090 from the Service's perspective.\n\nThe roughly 50% failure rate matches round-robin between 2 endpoints.\n\n## Diagnostic Path\n\n### 1. Check the endpoints\n\n```bash\nkubectl get endpoints frontend-api\n```\n\nShows 2 IP addresses. Both pods are registered as endpoints.\n\n### 2. Check both pods\n\n```bash\nkubectl get pods -l app=frontend-api -o wide\n```\n\nBoth show Running 1/1. Nothing obvious.\n\n### 3. Describe the pods and compare\n\n```bash\nkubectl get pods -l app=frontend-api -o jsonpath='{range .items[*]}{.metadata.name}{\"\\t\"}{.spec.containers[0].ports[0].containerPort}{\"\\n\"}{end}'\n```\n\nOne pod declares `containerPort: 80`, the other declares `containerPort: 9090`. The nginx image always listens on 80 regardless of what containerPort says, but the mismatch between the declared port and the Service targetPort affects endpoint routing.\n\n### 4. Test each pod individually\n\n```bash\n# Get pod names\nGOOD_POD=$(kubectl get pods -l version=good -o jsonpath='{.items[0].metadata.name}')\nBAD_POD=$(kubectl get pods -l version=bad -o jsonpath='{.items[0].metadata.name}')\n\n# Test good pod directly\nkubectl port-forward $GOOD_POD 8081:80 &\ncurl -s http://localhost:8081  # Returns nginx welcome page\nkill %1\n\n# Test bad pod directly on port 80 (not 9090)\nkubectl port-forward $BAD_POD 8082:80 &\ncurl -s http://localhost:8082  # Also returns nginx welcome page\nkill %1\n```\n\nBoth pods work on port 80. The issue is that one pod's endpoint is registered with the wrong port.\n\n## Solution\n\nFix the bad deployment's containerPort to match what nginx actually listens on:\n\n```bash\nkubectl patch deployment frontend-api-bad -p '{\"spec\":{\"template\":{\"spec\":{\"containers\":[{\"name\":\"nginx\",\"ports\":[{\"containerPort\":80}]}]}}}}'\n```\n\nOr edit the manifest to set `containerPort: 80` and reapply.\n\nBetter long-term fix: use a single Deployment with 2 replicas instead of two separate Deployments with the same label.\n\n## Triage Lessons\n\n- **\"Both pods are Running\" does not mean both are serving correctly.** Running only means the container process started. Without readiness probes, Kubernetes cannot tell if the pod is actually serving traffic.\n- **Check endpoints, not just pods.** `kubectl get endpoints` shows which pod IPs and ports the Service routes to. A wrong port here explains intermittent failures.\n- **Intermittent failures that correlate with replica count point to one bad replica.** If it fails ~50% of the time with 2 replicas, one replica is broken. With 3 replicas, it would fail ~33%.\n\n## Common Mistakes\n\n1. **Blaming the Service configuration** — The Service is correct (targetPort: 80). The issue is in one pod's declared containerPort.\n2. **Restarting all pods** — Both pods restart into the same configuration. The bug is in the Deployment spec.\n3. **Not checking endpoints** — Jumping to network debugging without first verifying that the Service endpoints are correct.\n4. **Assuming containerPort is just documentation** — containerPort affects endpoint registration and some CNI routing, even though it is often treated as informational.\n",
+      "files": [
+        {
+          "name": "lab-initialization.sh",
+          "language": "bash",
+          "content": "#!/bin/bash\n# Triage 06: Service intermittent 503\n# One healthy replica, one with wrong containerPort.\n# The bad pod runs but nginx listens on 80 while the readiness probe\n# checks the declared containerPort. No readiness probe = always Ready,\n# but the Service sends traffic to the wrong port on one pod.\n\n# Good pod: nginx on port 80, service targets port 80 — works\n# Bad pod: nginx on port 80 BUT containerPort declared as 9090.\n# Without a readiness probe, both pods appear Ready. Service sends\n# traffic to both, but the targetPort hits the declared containerPort\n# on the bad pod's endpoint.\n\ncat <<'EOF' | kubectl apply -f -\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: frontend-api-good\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: frontend-api\n      version: good\n  template:\n    metadata:\n      labels:\n        app: frontend-api\n        version: good\n    spec:\n      containers:\n      - name: nginx\n        image: nginx:1.25\n        ports:\n        - containerPort: 80\n---\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: frontend-api-bad\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: frontend-api\n      version: bad\n  template:\n    metadata:\n      labels:\n        app: frontend-api\n        version: bad\n    spec:\n      containers:\n      - name: nginx\n        image: nginx:1.25\n        ports:\n        - containerPort: 9090\n---\napiVersion: v1\nkind: Service\nmetadata:\n  name: frontend-api\nspec:\n  selector:\n    app: frontend-api\n  ports:\n  - port: 80\n    targetPort: 80\nEOF\n\necho \"\"\necho \"Waiting for pods to start...\"\nkubectl wait --for=condition=Ready pod -l app=frontend-api --timeout=60s 2>/dev/null\n\necho \"\"\necho \"Lab initialized.\"\necho \"  Service: frontend-api (2 pods, both show Running)\"\necho \"\"\necho \"Ticket says: 50% of requests return 503.\"\necho \"\"\necho \"Start investigating!\"\n"
+        }
+      ]
+    },
+    {
+      "name": "triage-07-dns-wrong-namespace",
+      "section": "triage",
+      "service": "k8s",
+      "difficulty": "intermediate",
+      "tags": [
+        "dns",
+        "namespace",
+        "fqdn",
+        "cross-namespace",
+        "incident-response"
+      ],
+      "status": "complete",
+      "prerequisites": [
+        "k8s-01-deployment-not-starting"
+      ],
+      "description": "Ticket: App can't connect to database after namespace migration. Short hostname doesn't resolve cross-namespace.",
+      "readme": "## Ticket\n\n**From:** Backend Developer\n**Priority:** High\n**Subject:** App can't connect to database after namespace migration\n\n> We moved the payments service from the \"default\" namespace to a new\n> \"payments\" namespace for better isolation. The database stayed in\n> the \"database\" namespace where it's always been.\n>\n> Since the move, the app fails to connect with:\n> \"getaddrinfo ENOTFOUND postgres\"\n>\n> The database is definitely running. We can kubectl exec into the\n> database pod and it responds fine. The connection string hasn't changed.\n>\n> Connection string: postgres://app:secret@postgres:5432/payments\n\n### What You Know\n\n- The app used to work in the \"default\" namespace.\n- It was moved to the \"payments\" namespace.\n- The database runs in the \"database\" namespace.\n- The connection string uses the short hostname \"postgres\".\n- The database pod and service are running.\n\n### Your Task\n\n1. Explain why the DNS lookup fails.\n2. Fix the connection so the app can reach the database across namespaces.\n\n## Lab Setup\n\n```bash\ncd triage-07-dns-wrong-namespace\nbash lab-initialization.sh\n```\n\n## Validation\n\n```bash\nkubectl run dns-test --image=busybox:1.36 --rm -it --restart=Never -n payments -- nslookup postgres.database.svc.cluster.local\n```\n\nShould resolve to the database Service IP.\n\n## [Solution](../solutions/triage-07-dns-wrong-namespace.md)\n",
+      "solution": "# Triage 07: DNS Resolution Fails After Namespace Migration\n\n## Root Cause\n\nKubernetes DNS resolves short hostnames within the **same namespace**. When the app was in the \"default\" namespace and the database was also accessible there (or the default search domain matched), `postgres` resolved correctly.\n\nAfter the app moved to the \"payments\" namespace, the DNS search path in `/etc/resolv.conf` changed. Now `postgres` resolves as `postgres.payments.svc.cluster.local` — which does not exist. The database Service lives in the \"database\" namespace.\n\nThe fix: use the fully qualified domain name (FQDN): `postgres.database.svc.cluster.local`.\n\n## Diagnostic Path\n\n### 1. Test DNS from the app's namespace\n\n```bash\nkubectl run dns-test --image=busybox:1.36 --rm -it --restart=Never -n payments -- nslookup postgres\n```\n\nReturns `** server can't find postgres`. The short name does not resolve.\n\n### 2. Test DNS with the FQDN\n\n```bash\nkubectl run dns-test2 --image=busybox:1.36 --rm -it --restart=Never -n payments -- nslookup postgres.database.svc.cluster.local\n```\n\nReturns the Service IP. The database is reachable by FQDN.\n\n### 3. Check where the Service lives\n\n```bash\nkubectl get svc -A | grep postgres\n```\n\nShows `postgres` in the `database` namespace.\n\n### 4. Check the app's connection string\n\n```bash\nkubectl get deployment payments-app -n payments -o jsonpath='{.spec.template.spec.containers[0].env[0].value}'\n```\n\nShows `postgres://app:secret@postgres:5432/payments` — short hostname.\n\n## Solution\n\nUpdate the connection string to use the FQDN:\n\n```bash\nkubectl set env deployment/payments-app -n payments \\\n    DATABASE_URL=\"postgres://app:secret@postgres.database.svc.cluster.local:5432/payments\"\n```\n\nOr use the shorter cross-namespace form: `postgres.database` (resolves via search domains).\n\n## How Kubernetes DNS Works\n\nKubernetes DNS resolves service names using search domains configured in each pod's `/etc/resolv.conf`:\n\n```\nsearch payments.svc.cluster.local svc.cluster.local cluster.local\n```\n\nWhen you look up `postgres`, the resolver tries:\n1. `postgres.payments.svc.cluster.local` — not found (no postgres Service in payments)\n2. `postgres.svc.cluster.local` — not found\n3. `postgres.cluster.local` — not found\n4. `postgres` — not found\n\nNone match because the Service is `postgres.database.svc.cluster.local`.\n\n| Hostname | Resolves From | Why |\n|----------|--------------|-----|\n| `postgres` | Same namespace only | Expands to `postgres.<current-ns>.svc.cluster.local` |\n| `postgres.database` | Any namespace | Expands to `postgres.database.svc.cluster.local` |\n| `postgres.database.svc.cluster.local` | Any namespace | Fully qualified — no search path needed |\n\n## Triage Lessons\n\n- **Short hostnames are namespace-scoped.** When you move a service to a different namespace, all cross-namespace references break unless they use FQDNs.\n- **\"The connection string hasn't changed\" is the clue.** If the string didn't change but the app moved namespaces, the DNS context changed.\n- **Test DNS from the right namespace.** `nslookup postgres` from the database namespace works; from the payments namespace it fails. Always test from the pod's perspective.\n\n## Common Mistakes\n\n1. **Testing DNS from the wrong namespace** — Running nslookup from the database namespace proves nothing about what the app sees.\n2. **Creating a duplicate Service** — Adding a `postgres` Service in the payments namespace that forwards to the database namespace works but adds complexity. Use FQDNs instead.\n3. **Blaming NetworkPolicies** — The problem is DNS resolution, not TCP connectivity. Check NetworkPolicies only if DNS resolves but connections time out.\n4. **Using ExternalName Services as a workaround** — While `ExternalName` can alias cross-namespace services, it's unnecessary complexity. FQDNs are simpler and more explicit.\n",
+      "files": [
+        {
+          "name": "lab-initialization.sh",
+          "language": "bash",
+          "content": "#!/bin/bash\n# Triage 07: DNS resolution fails after namespace migration\n# App moved to \"payments\" namespace, DB in \"database\" namespace.\n# Short hostname \"postgres\" only resolves within the same namespace.\n\nkubectl create namespace payments 2>/dev/null\nkubectl create namespace database 2>/dev/null\n\n# Deploy the database in \"database\" namespace\ncat <<'EOF' | kubectl apply -f -\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: postgres\n  namespace: database\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: postgres\n  template:\n    metadata:\n      labels:\n        app: postgres\n    spec:\n      containers:\n      - name: postgres\n        image: nginx:1.25\n        ports:\n        - containerPort: 80\n---\napiVersion: v1\nkind: Service\nmetadata:\n  name: postgres\n  namespace: database\nspec:\n  selector:\n    app: postgres\n  ports:\n  - port: 5432\n    targetPort: 80\nEOF\n\n# Deploy the app in \"payments\" namespace with wrong DNS\ncat <<'EOF' | kubectl apply -f -\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: payments-app\n  namespace: payments\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: payments-app\n  template:\n    metadata:\n      labels:\n        app: payments-app\n    spec:\n      containers:\n      - name: app\n        image: nginx:1.25\n        env:\n        - name: DATABASE_URL\n          value: \"postgres://app:secret@postgres:5432/payments\"\nEOF\n\necho \"\"\necho \"Waiting for pods...\"\nkubectl wait --for=condition=Ready pod -l app=postgres -n database --timeout=60s 2>/dev/null\nkubectl wait --for=condition=Ready pod -l app=payments-app -n payments --timeout=60s 2>/dev/null\n\necho \"\"\necho \"Lab initialized.\"\necho \"  App: payments namespace (connection string uses 'postgres' short hostname)\"\necho \"  DB:  database namespace (service name: postgres)\"\necho \"\"\necho \"Ticket says: App can't connect — getaddrinfo ENOTFOUND postgres\"\necho \"\"\necho \"Try: kubectl run dns-test --image=busybox:1.36 --rm -it --restart=Never -n payments -- nslookup postgres\"\n"
+        }
+      ]
+    },
+    {
+      "name": "triage-08-deploy-works-locally-fails-ci",
+      "section": "triage",
+      "service": "gitlab",
+      "difficulty": "beginner",
+      "tags": [
+        "permissions",
+        "non-root",
+        "filesystem",
+        "works-on-my-machine",
+        "incident-response"
+      ],
+      "status": "complete",
+      "prerequisites": [
+        "gitlab-00-tutorial"
+      ],
+      "description": "Ticket: Deploy script works locally but Permission Denied in CI. Script writes to /opt/ which needs root.",
+      "readme": "## Ticket\n\n**From:** Junior Developer\n**Priority:** Medium\n**Subject:** Script works on my machine but fails in CI\n\n> I wrote a deploy script that creates a config file in /opt/app/config/.\n> It works perfectly on my laptop. But in CI, it fails with:\n> \"Permission denied: /opt/app/config/settings.json\"\n>\n> I've tested the script 5 times locally and it always works. The CI\n> runner must be broken.\n>\n> Pipeline: .gitlab-ci.yml in this directory\n\n### What You Know\n\n- The developer runs the script as their own user (with sudo access).\n- CI runners execute jobs in containers that may run as non-root.\n- The script tries to write to /opt/app/config/ which requires elevated permissions.\n- The developer has not considered runtime environment differences.\n\n### Your Task\n\n1. Run the pipeline locally and reproduce the failure.\n2. Identify why it fails in CI.\n3. Fix the pipeline without requiring root access.\n\n## Lab Setup\n\nNo infrastructure needed.\n\n```bash\ncd triage-08-deploy-works-locally-fails-ci\ngitlab-ci-local\n```\n\n## Validation\n\n```bash\ngitlab-ci-local\n# The deploy stage should pass and create the config file successfully\n```\n\n## [Solution](../solutions/triage-08-deploy-works-locally-fails-ci.md)\n",
+      "solution": "# Triage 08: Script Works Locally, Fails in CI\n\n## Root Cause\n\nThe deploy script writes to `/opt/app/config/`, a system directory that requires root permissions. On the developer's laptop, they run with sudo or as a user with write access to /opt. In CI, the container runs as a non-root user (or the filesystem is read-only for system paths), so `mkdir -p /opt/app/config` fails with \"Permission denied\".\n\nThe CI runner works correctly. The script assumes elevated privileges that CI containers lack.\n\n## Diagnostic Path\n\n### 1. Run the pipeline\n\n```bash\ngitlab-ci-local\n```\n\nThe build stage passes. The deploy stage fails with:\n```\nmkdir: can't create directory '/opt/app/config': Permission denied\n```\n\n### 2. Check the script\n\nThe deploy job runs `mkdir -p /opt/app/config`. In `node:20-alpine`, the default user may not have write access to `/opt/`.\n\n### 3. Identify the fix\n\nThe script should write to a directory the CI user controls — the project workspace, a temp directory, or `$CI_PROJECT_DIR`.\n\n## Solution\n\nWrite to the CI workspace instead of a system directory:\n\n```yaml\ndeploy_config:\n  stage: deploy\n  image: node:20-alpine\n  script:\n    - mkdir -p ./deploy/config\n    - cp settings.json ./deploy/config/settings.json\n    - echo \"Config deployed to ./deploy/config/\"\n    - cat ./deploy/config/settings.json\n```\n\nOr use a variable for the config path so it can be overridden per environment:\n\n```yaml\ndeploy_config:\n  stage: deploy\n  image: node:20-alpine\n  variables:\n    CONFIG_DIR: \"./deploy/config\"\n  script:\n    - mkdir -p $CONFIG_DIR\n    - cp settings.json $CONFIG_DIR/settings.json\n    - echo \"Config deployed to $CONFIG_DIR/\"\n    - cat $CONFIG_DIR/settings.json\n```\n\n## \"Works on My Machine\" Checklist\n\nWhen a script works locally but fails in CI, check these differences:\n\n| Factor | Local | CI |\n|--------|-------|----|\n| **User** | Your user (often with sudo) | Container user (often non-root) |\n| **Filesystem** | Full access, persistent | Ephemeral, restricted paths |\n| **Environment variables** | Your shell profile | Only CI-defined variables |\n| **Network** | Direct internet, VPN | Runner network, proxy, restricted egress |\n| **Tools installed** | Everything you've ever installed | Only what the image provides |\n| **Working directory** | Wherever you run from | $CI_PROJECT_DIR (the repo root) |\n\n## Triage Lessons\n\n- **\"The CI runner must be broken\" usually means the script assumes local privileges.** The runner is working correctly — it runs the script in a controlled environment that is different from a developer laptop.\n- **Write to relative paths or $CI_PROJECT_DIR.** Avoid hardcoded system paths (/opt, /usr/local, /etc) in CI scripts unless the image explicitly supports it.\n- **Test scripts inside the same container image locally.** Run `docker run --rm -it node:20-alpine sh` and try the commands there. This reproduces the CI environment.\n\n## Common Mistakes\n\n1. **Adding `sudo` to CI scripts** — Most CI images do not have sudo installed. Even if they do, running as root in CI is a security risk.\n2. **Switching to a root-based image** — This masks the problem. The script should not require root for deploying config files.\n3. **Blaming the artifact passing** — The settings.json file is passed correctly via artifacts. The failure is in the destination path, not the source.\n4. **Not reading the error message** — \"Permission denied\" on a mkdir tells you exactly what happened. The path is not writable.\n",
+      "files": [
+        {
+          "name": ".gitlab-ci.yml",
+          "language": "yaml",
+          "content": "stages:\n  - build\n  - deploy\n\nbuild_app:\n  stage: build\n  image: node:20-alpine\n  script:\n    - echo '{\"version\":\"1.0.0\",\"env\":\"production\"}' > settings.json\n    - echo \"Build complete\"\n  artifacts:\n    paths:\n      - settings.json\n\ndeploy_config:\n  stage: deploy\n  image: node:20-alpine\n  script:\n    - mkdir -p /opt/app/config\n    - cp settings.json /opt/app/config/settings.json\n    - echo \"Config deployed to /opt/app/config/\"\n    - cat /opt/app/config/settings.json\n"
+        }
+      ]
+    },
+    {
+      "name": "triage-09-pipeline-slow-cache-miss",
+      "section": "triage",
+      "service": "gitlab",
+      "difficulty": "beginner",
+      "tags": [
+        "cache",
+        "performance",
+        "ci-pipeline-id",
+        "regression",
+        "incident-response"
+      ],
+      "status": "complete",
+      "prerequisites": [
+        "gitlab-01-cache-not-shared"
+      ],
+      "description": "Ticket: Pipeline went from 2 to 12 minutes after cleanup MR. Cache key changed to $CI_PIPELINE_ID.",
+      "readme": "## Ticket\n\n**From:** Tech Lead\n**Priority:** Low (but annoying)\n**Subject:** Pipeline went from 2 minutes to 12 minutes overnight\n\n> Our pipeline used to take about 2 minutes. Since Monday it takes 12+\n> minutes because npm install downloads everything from scratch every run.\n>\n> The cache was working before. We merged a \"cleanup\" MR on Friday that\n> simplified the CI config. Nobody thought it would affect performance.\n>\n> Pipeline: .gitlab-ci.yml in this directory\n\n### What You Know\n\n- The pipeline caches node_modules/.\n- A \"cleanup\" merge request was merged Friday that touched the CI config.\n- Since Monday, every run redownloads all dependencies.\n- The team says the cleanup \"just removed unused variables\".\n\n### Your Task\n\n1. Run the pipeline and confirm the cache miss.\n2. Find what the cleanup MR broke.\n3. Fix the cache so it is reused across runs.\n\n## Lab Setup\n\nNo infrastructure needed.\n\n```bash\ncd triage-09-pipeline-slow-cache-miss\ngitlab-ci-local\n```\n\n## Validation\n\n```bash\n# Run twice — second run should reuse cache:\ngitlab-ci-local\ngitlab-ci-local\n# The install stage should be significantly faster on the second run\n```\n\n## [Solution](../solutions/triage-09-pipeline-slow-cache-miss.md)\n",
+      "solution": "# Triage 09: Pipeline Slow — Cache Miss Every Run\n\n## Root Cause\n\nThe \"cleanup\" MR changed the cache key from `$CI_COMMIT_REF_SLUG` to `$CI_PIPELINE_ID`. Every pipeline run gets a unique ID, so the cache key is different every time. The cache is written but never read by a subsequent run — it is effectively disabled.\n\nThis is the same bug as [gitlab-01-cache-not-shared](../../gitlab/gitlab-01-cache-not-shared/), but presented as a regression after a \"harmless\" config change.\n\n## Diagnostic Path\n\n### 1. Run the pipeline twice\n\n```bash\ngitlab-ci-local\ngitlab-ci-local\n```\n\nBoth runs download all dependencies from scratch. The second run shows \"Cache miss\".\n\n### 2. Read the cache configuration\n\nOpen `.gitlab-ci.yml`. The cache key is `$CI_PIPELINE_ID`.\n\n### 3. Understand the problem\n\n`$CI_PIPELINE_ID` is unique per pipeline run. Every run creates a new cache bucket and never reads from the previous one. The cache exists but is never reused.\n\n### 4. Check what it was before\n\nThe cleanup MR changed it from `$CI_COMMIT_REF_SLUG` (branch name, stable across runs on the same branch) to `$CI_PIPELINE_ID` (unique per run). The person who made the change likely thought they were simplifying by using a \"more specific\" key.\n\n## Solution\n\nChange the cache key back to `$CI_COMMIT_REF_SLUG`:\n\n```yaml\ncache:\n  key: $CI_COMMIT_REF_SLUG\n  paths:\n    - node_modules/\n```\n\nThis means all runs on the same branch share the cache. The first run downloads dependencies; subsequent runs reuse them.\n\n## Cache Key Reference\n\n| Key | Value | Reuse |\n|-----|-------|-------|\n| `$CI_COMMIT_REF_SLUG` | Branch name (e.g., `main`) | All runs on same branch share cache |\n| `$CI_COMMIT_SHA` | Full commit hash | Never reused (every commit is unique) |\n| `$CI_PIPELINE_ID` | Pipeline run ID | Never reused (every run is unique) |\n| `$CI_JOB_NAME` | Job name | Same job shares cache across all branches |\n| `${CI_COMMIT_REF_SLUG}-${CI_JOB_NAME}` | Branch + job | Per-branch, per-job isolation |\n\n## Triage Lessons\n\n- **\"Just a cleanup\" can break performance.** Config changes that look cosmetic (renaming variables, reorganizing YAML) can have real effects when the values change.\n- **Compare before and after.** When performance regresses, diff the config against the last known working version. The change is usually small and obvious in hindsight.\n- **Understand what CI variables resolve to.** `$CI_PIPELINE_ID` sounds reasonable as a cache key until you realize it changes every run.\n\n## Common Mistakes\n\n1. **Adding more cache paths** — The cache works fine. The problem is the key, not the paths.\n2. **Switching to artifacts** — Artifacts are for passing files between stages in the same pipeline. Cache is for persisting files across pipeline runs. Different tools for different problems.\n3. **Blaming the runner** — The runner cache system is working correctly. It writes and reads by key. The key just never matches.\n4. **Setting `cache:policy: pull-push` explicitly** — This is already the default. The policy is not the issue.\n\n## Related Drill\n\nSee [gitlab-01-cache-not-shared](../../gitlab/gitlab-01-cache-not-shared/) for the foundational drill on cache key selection.\n",
+      "files": [
+        {
+          "name": ".gitlab-ci.yml",
+          "language": "yaml",
+          "content": "stages:\n  - install\n  - test\n\ninstall_deps:\n  stage: install\n  image: node:20-alpine\n  script:\n    - npm install\n    - echo \"Dependencies installed\"\n  cache:\n    key: $CI_PIPELINE_ID\n    paths:\n      - node_modules/\n\nrun_tests:\n  stage: test\n  image: node:20-alpine\n  script:\n    - ls node_modules/.package-lock.json && echo \"Cache hit\" || echo \"Cache miss — reinstalling\"\n    - npm test\n  cache:\n    key: $CI_PIPELINE_ID\n    paths:\n      - node_modules/\n"
+        },
+        {
+          "name": "package.json",
+          "language": "json",
+          "content": "{\n  \"name\": \"pipeline-app\",\n  \"version\": \"1.0.0\",\n  \"scripts\": {\n    \"test\": \"node -e \\\"console.log('All tests passed')\\\"\"\n  },\n  \"dependencies\": {\n    \"lodash\": \"4.17.21\"\n  }\n}\n"
+        }
+      ]
+    },
+    {
+      "name": "triage-10-crashloop-one-environment",
+      "section": "triage",
+      "service": "k8s",
+      "difficulty": "intermediate",
+      "tags": [
+        "comparison",
+        "configmap",
+        "namespaces",
+        "crashloopbackoff",
+        "environment-diff",
+        "incident-response"
+      ],
+      "status": "complete",
+      "prerequisites": [
+        "k8s-03-configmap-mount-failure"
+      ],
+      "description": "Ticket: Same deployment runs in staging but CrashLoopBackOff in production. \"Same YAML.\" A ConfigMap key typo differs only between namespaces — diff the two environments to find it.",
+      "readme": "## Ticket\n\n**From:** Backend Developer\n**Priority:** High\n**Subject:** Same deployment works in staging but CrashLoopBackOff in production\n\n> We promoted our `checkout` service from staging to production this\n> morning. It has been running fine in staging for two weeks. In production\n> the pod never comes up — it just cycles through CrashLoopBackOff.\n>\n> We deployed the exact same image and the exact same YAML. Nothing is\n> different between the two environments. I even copied the manifests from\n> the staging folder.\n>\n> Can someone check if the production cluster is broken?\n>\n> Namespaces: `staging` (working) and `production` (broken)\n> Service: checkout\n\n### What You Know\n\n- The `checkout` pod is Running in `staging` and CrashLoopBackOff in `production`.\n- The developer insists the image and YAML are identical.\n- \"Nothing is different\" is the claim to test, not the fact to trust.\n- Both namespaces exist and the image pulls fine (it starts, then exits).\n\n### Your Task\n\n1. Confirm the pod is healthy in `staging` and crashing in `production`.\n2. Diff the two environments to find what actually differs.\n3. Fix production so the pod reaches a Ready state.\n\n## Lab Setup\n\n```bash\ncd triage-10-crashloop-one-environment\nbash lab-initialization.sh\n```\n\n## Validation\n\n```bash\n# The production pod should reach Running and stay there (no restarts climbing):\nkubectl get pods -n production -l app=checkout\nkubectl rollout status deployment/checkout -n production --timeout=60s\n```\n\nThe production `checkout` pod should be `Running` `1/1` and the rollout should report success.\n\n## [Solution](../solutions/triage-10-crashloop-one-environment.md)\n",
+      "solution": "# Triage 10: Same Deployment, Crashes in One Environment\n\n## Root Cause\n\nThe Deployments in `staging` and `production` are genuinely identical. The difference is in the `checkout-config` ConfigMap that each namespace owns:\n\n- `staging` defines the key `DATABASE_URL` (correct).\n- `production` defines the key `DATABASE_URI` (a typo).\n\nThe container reads its environment with `envFrom.configMapRef`, then hard-exits when `DATABASE_URL` is empty. In production the correct key never gets injected, `DATABASE_URL` is empty, and the container exits 1 on every start, producing CrashLoopBackOff.\n\nThe developer's claim (\"same image, same YAML\") is true and also a red herring. The workload manifests match; the *environment-scoped configuration* does not. This is why comparison, not code review, is the fastest path to the answer.\n\n## Diagnostic Path\n\n### 1. Confirm the asymmetry\n\n```bash\nkubectl get pods -n staging -l app=checkout\nkubectl get pods -n production -l app=checkout\n```\n\n`staging` is `Running`; `production` is `CrashLoopBackOff` with a climbing restart count. One environment works, one doesn't — a strong signal to *diff the environments* rather than debug the app.\n\n### 2. Read why the container is exiting\n\n```bash\nkubectl logs -n production -l app=checkout --previous\n```\n\n```\nFATAL: DATABASE_URL is empty — cannot connect to database\n```\n\nThe app tells you exactly what it needs. Now the question is *why* `DATABASE_URL` is empty in production only.\n\n### 3. Compare the two environments directly\n\nDiff the Deployments first to eliminate them:\n\n```bash\ndiff \\\n  <(kubectl get deployment checkout -n staging  -o yaml | grep -v -E 'namespace:|resourceVersion:|uid:|creationTimestamp:|generation:') \\\n  <(kubectl get deployment checkout -n production -o yaml | grep -v -E 'namespace:|resourceVersion:|uid:|creationTimestamp:|generation:')\n```\n\nNo meaningful difference. The workloads are the same, exactly as reported. Now compare the thing the Deployment depends on:\n\n```bash\ndiff \\\n  <(kubectl get configmap checkout-config -n staging    -o jsonpath='{.data}') \\\n  <(kubectl get configmap checkout-config -n production -o jsonpath='{.data}')\n```\n\nStaging has `DATABASE_URL`; production has `DATABASE_URI`. That single character is the incident.\n\n## Solution\n\nFix the production ConfigMap key to match what the container reads, then restart the rollout:\n\n```bash\nkubectl create configmap checkout-config -n production \\\n  --from-literal=DATABASE_URL=\"postgres://checkout:secret@db.production.svc:5432/checkout\" \\\n  --from-literal=LOG_LEVEL=\"info\" \\\n  --dry-run=client -o yaml | kubectl apply -f -\n\nkubectl rollout restart deployment/checkout -n production\nkubectl rollout status  deployment/checkout -n production --timeout=60s\n```\n\nThe pod injects a non-empty `DATABASE_URL`, starts cleanly, and stays Running.\n\n## Triage Lessons\n\n- **\"Nothing is different\" is a hypothesis, not evidence.** When the same artifact behaves differently in two places, something in the environment differs. Your job is to find it, not to accept the claim.\n- **When one environment works and another doesn't, diff them.** The working environment is a free known-good reference. The delta between good and broken is a short, high-value suspect list.\n- **Diff outward from the workload.** Deployment first (rule it out), then its ConfigMaps, Secrets, ServiceAccounts, and namespace-scoped policies. Config drift between environments hides in exactly these places.\n- **Let the logs narrow the search before you diff.** The `--previous` logs named `DATABASE_URL` specifically, so you compared the right key instead of eyeballing entire manifests.\n\n## Common Mistakes\n\n1. **Debugging the application code.** The image is identical and healthy in staging. The code is not the bug; the environment config is.\n2. **Blaming the production cluster.** The cluster schedules and runs the pod fine. It faithfully starts a container that then exits on its own.\n3. **Comparing manifests by eye instead of with `diff`.** The Deployments match, so a visual scan of production alone finds nothing. The signal only appears when staging and production are placed side by side.\n4. **Deleting and recreating the pod.** It reschedules into the same broken ConfigMap and crash-loops again. The fix is in the configuration, not the pod lifecycle.\n",
+      "files": [
+        {
+          "name": "lab-initialization.sh",
+          "language": "bash",
+          "content": "#!/bin/bash\n# Triage 10: Same deployment, healthy in staging, CrashLoopBackOff in production.\n#\n# The Deployments are byte-for-byte identical across both namespaces. The only\n# difference is the ConfigMap the container reads its config from:\n#   staging/checkout-config    has key DATABASE_URL   (correct)\n#   production/checkout-config  has key DATABASE_URI   (typo — wrong key)\n#\n# The container requires a non-empty DATABASE_URL and exits 1 when it is empty,\n# so production crash-loops while staging runs. The bug is invisible unless you\n# diff the two environments — the manifests really are \"the same\".\n\nkubectl create namespace staging 2>/dev/null\nkubectl create namespace production 2>/dev/null\n\n# ── staging: correct ConfigMap key ───────────────────────────────\ncat <<'EOF' | kubectl apply -f -\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: checkout-config\n  namespace: staging\ndata:\n  DATABASE_URL: \"postgres://checkout:secret@db.staging.svc:5432/checkout\"\n  LOG_LEVEL: \"info\"\nEOF\n\n# ── production: typo'd ConfigMap key (DATABASE_URI, not DATABASE_URL) ──\ncat <<'EOF' | kubectl apply -f -\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: checkout-config\n  namespace: production\ndata:\n  DATABASE_URI: \"postgres://checkout:secret@db.production.svc:5432/checkout\"\n  LOG_LEVEL: \"info\"\nEOF\n\n# ── identical Deployment applied to BOTH namespaces ──────────────\nfor NS in staging production; do\ncat <<EOF | kubectl apply -f -\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: checkout\n  namespace: ${NS}\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: checkout\n  template:\n    metadata:\n      labels:\n        app: checkout\n    spec:\n      containers:\n      - name: checkout\n        image: busybox:1.36\n        command: [\"sh\", \"-c\"]\n        args:\n          - |\n            if [ -z \"\\$DATABASE_URL\" ]; then\n              echo \"FATAL: DATABASE_URL is empty — cannot connect to database\"\n              exit 1\n            fi\n            echo \"checkout started, DB=\\$DATABASE_URL\"\n            exec sleep 3600\n        envFrom:\n        - configMapRef:\n            name: checkout-config\nEOF\ndone\n\necho \"\"\necho \"Waiting for staging to settle...\"\nkubectl rollout status deployment/checkout -n staging --timeout=60s 2>/dev/null\n\necho \"\"\necho \"Lab initialized.\"\necho \"  staging/checkout    → Running (works)\"\necho \"  production/checkout → CrashLoopBackOff (broken)\"\necho \"\"\necho \"Ticket says: 'same image, same YAML, nothing is different.'\"\necho \"Test that claim. Compare the two environments.\"\necho \"\"\necho \"Hint: kubectl get configmap checkout-config -n staging -o yaml\"\necho \"      kubectl get configmap checkout-config -n production -o yaml\"\n"
+        }
+      ]
+    },
+    {
+      "name": "triage-11-everything-broke-at-once",
+      "section": "triage",
+      "service": "gitlab",
+      "difficulty": "intermediate",
+      "tags": [
+        "rule-out",
+        "discard",
+        "extends",
+        "shared-config",
+        "before-script",
+        "incident-response"
+      ],
+      "status": "complete",
+      "prerequisites": [
+        "gitlab-00-tutorial"
+      ],
+      "description": "Ticket: lint, test, and build all fail at once after a cleanup MR added a shared before_script. Rule out the individual jobs and isolate the one shared block they inherit.",
+      "readme": "## Ticket\n\n**From:** Platform Engineer\n**Priority:** High\n**Subject:** Entire pipeline is red — every single job fails now\n\n> Every job in our pipeline started failing at the same time: lint, test,\n> and build all fail immediately. Nobody touched those jobs. The only thing\n> that merged was a \"CI cleanup\" MR that added a shared setup block so we\n> stop repeating ourselves across jobs.\n>\n> Each job fails with something like:\n> `./scripts/ci-setup.sh: line 3: aws: command not found`\n>\n> Three unrelated jobs breaking together makes no sense. Are the runners\n> misconfigured?\n>\n> Pipeline: .gitlab-ci.yml in this directory\n\n### What You Know\n\n- lint, test, and build all fail at the same time.\n- The jobs themselves were not edited — a shared setup block was introduced.\n- When many unrelated things break together, look for the one thing they share.\n- Each job fails in setup, before its real work ever runs.\n\n### Your Task\n\n1. Run the pipeline and confirm all three jobs fail the same way.\n2. Find the single shared change that every job now inherits.\n3. Fix it so all three jobs pass, without duplicating setup back into each job.\n\n## Lab Setup\n\nNo infrastructure needed.\n\n```bash\ncd triage-11-everything-broke-at-once\ngitlab-ci-local\n```\n\n## Validation\n\n```bash\ngitlab-ci-local\n# All three jobs (lint, test, build) should succeed.\n```\n\nEvery job should reach and complete its own script.\n\n## [Solution](../solutions/triage-11-everything-broke-at-once.md)\n",
+      "solution": "# Triage 11: Everything Broke At Once\n\n## Root Cause\n\nThe \"cleanup\" MR factored three duplicated `before_script` blocks into a single `.setup` template that every job now `extends`. That shared `before_script` runs `./scripts/ci-setup.sh`, which calls `aws --version`. The `node:20-alpine` runner image does not include the AWS CLI, so the setup script exits non-zero, and every job that extends `.setup` fails in `before_script` before its own `script` runs.\n\nThree unrelated jobs failing simultaneously is not a coincidence and not a runner fault. It is the signature of a single shared dependency breaking. The cleanup introduced exactly one new shared thing: `.setup`. That is where to look first.\n\n## Diagnostic Path\n\n### 1. Confirm the failures are identical\n\n```bash\ngitlab-ci-local\n```\n\n`lint`, `test`, and `build` all fail with the same message:\n\n```\n./scripts/ci-setup.sh: line ...: aws: command not found\n```\n\nIdentical failure text across unrelated jobs is the tell. They are not independently broken; they share a cause.\n\n### 2. Find what they have in common\n\nRead the pipeline and note what changed. Each job gained `extends: .setup`. The jobs' own `script` blocks were untouched. The only shared, new element is the `.setup` template and the `ci-setup.sh` it calls.\n\n```bash\ngrep -n \"extends\" .gitlab-ci.yml\n```\n\nAll three jobs point at `.setup`. That single block is the common factor.\n\n### 3. Isolate the shared block (rule it out or rule it in)\n\nTemporarily bypass the shared setup on one job to prove the jobs themselves are fine:\n\n```bash\n# In .gitlab-ci.yml, comment out `extends: .setup` on `lint` only, then:\ngitlab-ci-local --job lint\n```\n\n`lint` now passes. One change flipped one job from red to green, which confirms the fault lives entirely in the shared `.setup`, not in any individual job. Restore the `extends` line and fix the real cause.\n\n## Solution\n\nThe setup script should not require a tool the image does not have. The `aws --version` call was copied in without checking the runner image. Remove the unmet dependency (or install it, or guard it):\n\nPreferred — drop the line that does not belong in shared setup:\n\n```sh\n# scripts/ci-setup.sh\n#!/bin/sh\nset -e\necho \"Configuring CI environment...\"\necho \"CI environment ready.\"\n```\n\nIf the AWS CLI is genuinely needed by *some* jobs, scope it to those jobs instead of the shared block, or install it where required:\n\n```yaml\n# only the jobs that need it\ndeploy:\n  extends: .setup\n  before_script:\n    - !reference [.setup, before_script]\n    - apk add --no-cache aws-cli\n```\n\nRe-run:\n\n```bash\ngitlab-ci-local\n```\n\nAll three jobs reach and complete their own scripts.\n\n## Triage Lessons\n\n- **When many unrelated things fail together, find the one thing they share.** Simultaneous failure across independent jobs almost always points to a common dependency: a shared template, a base image, a global variable, a common config file.\n- **Rule out by isolation, not by guessing.** Bypassing the shared block on a single job is a one-line experiment that proves where the fault is. Change one thing, observe, then act on the evidence.\n- **\"Nobody touched those jobs\" can be true and irrelevant.** The jobs did not change; what they *inherit* changed. Shared setup is code, and refactoring it is a change to every job at once.\n- **DRY has a blast radius.** Consolidating duplication is good, but a single shared block now fails all consumers together. Shared setup deserves the same scrutiny as shared library code.\n\n## Common Mistakes\n\n1. **Blaming the runners.** The runner works. It faithfully runs a setup script that calls a missing binary.\n2. **Debugging lint, test, and build separately.** Three parallel investigations of the same shared cause waste time. Consolidate on the common factor first.\n3. **Reverting the whole cleanup MR.** The consolidation is fine; one line inside the shared script is wrong. Fix the line, keep the DRY improvement.\n4. **Copying setup back into each job.** This \"fixes\" it by undoing the refactor and reintroduces the duplication the MR removed. Scope the unmet dependency instead.\n",
+      "files": [
+        {
+          "name": ".gitlab-ci.yml",
+          "language": "yaml",
+          "content": "# The \"cleanup\" MR replaced three duplicated before_script blocks with one\n# shared .setup job that every job now extends. The intent was good — stop\n# repeating setup. But the shared script calls a tool the runner image does\n# not have, so all three jobs fail in setup, before their real work runs.\n#\n# The failure is shared, so the cause is shared. Find the one block they all\n# inherit and rule out the individual jobs.\n\nstages:\n  - lint\n  - test\n  - build\n\n.setup:\n  image: node:20-alpine\n  before_script:\n    - sh ./scripts/ci-setup.sh\n\nlint:\n  extends: .setup\n  stage: lint\n  script:\n    - echo \"Running linter...\"\n    - node -e \"console.log('lint clean')\"\n\ntest:\n  extends: .setup\n  stage: test\n  script:\n    - echo \"Running tests...\"\n    - node -e \"console.log('all tests passed')\"\n\nbuild:\n  extends: .setup\n  stage: build\n  script:\n    - echo \"Building artifact...\"\n    - node -e \"console.log('build complete')\"\n"
+        },
+        {
+          "name": "scripts/ci-setup.sh",
+          "language": "bash",
+          "content": "#!/bin/sh\n# Shared CI setup, introduced by the \"cleanup\" MR.\n# This runs as before_script for lint, test, and build.\nset -e\n\necho \"Configuring CI environment...\"\n\n# BUG: this line assumes the AWS CLI is present on the runner image.\n# The node:20-alpine image does not ship the aws CLI, so every job that\n# inherits this setup fails here with \"aws: command not found\" before\n# its own script ever runs.\naws --version\n\necho \"CI environment ready.\"\n"
+        }
+      ]
+    },
+    {
+      "name": "triage-12-config-assumed-updated",
+      "section": "triage",
+      "service": "aws",
+      "difficulty": "intermediate",
+      "tags": [
+        "verify-assumptions",
+        "ssm",
+        "parameter-store",
+        "stale-config",
+        "incident-response"
+      ],
+      "status": "complete",
+      "prerequisites": [],
+      "description": "Ticket: Service still hits the old endpoint after \"the config was updated\". The SSM update hit a typo'd parameter path — verify the value the app actually reads instead of trusting the report.",
+      "readme": "## Ticket\n\n**From:** Application Developer\n**Priority:** High\n**Subject:** Payments service can't reach the new provider after migration\n\n> We migrated our payment provider endpoint last night. The new host is\n> `api.payments-v2.internal`. Ops updated the SSM parameter with the new\n> URL and confirmed the change went through.\n>\n> But our `charge` function still can't connect. It keeps timing out\n> against the OLD host `api.payments-v1.internal`, which we already\n> decommissioned. Since the config is definitely updated, this has to be\n> a DNS or network problem — the runner is caching the old address, or\n> the firewall is blocking the new one.\n>\n> Can infra check the network path to the new endpoint?\n>\n> Parameter: /payments/charge/endpoint  (SSM Parameter Store)\n\n### What You Know\n\n- The service reads its endpoint from the SSM parameter `/payments/charge/endpoint`.\n- Ops *say* they updated the parameter to the new host.\n- The app is still hitting the OLD host, which no longer exists.\n- The ticket has already concluded \"it's the network\" without checking the config.\n\n### Your Task\n\n1. Do not accept \"the config is definitely updated.\" Verify it.\n2. Read the value the application actually reads at runtime.\n3. Fix the source of the stale endpoint so the app targets the new host.\n\n## Lab Setup\n\nRequires LocalStack running (`cd ../../aws && make run`).\n\n```bash\ncd triage-12-config-assumed-updated\nbash lab-initialization.sh\n```\n\n## Validation\n\n```bash\n# The parameter the app reads should return the NEW host:\nawslocal ssm get-parameter --name /payments/charge/endpoint \\\n  --query 'Parameter.Value' --output text\n```\n\nThe value should be `https://api.payments-v2.internal/charge` (the new host), not the decommissioned `v1` host.\n\n## [Solution](../solutions/triage-12-config-assumed-updated.md)\n",
+      "solution": "# Triage 12: The Config You Assumed Was Updated\n\n## Root Cause\n\nThe application reads its endpoint from the SSM parameter `/payments/charge/endpoint` (singular). During the migration, Ops updated a parameter named `/payments/charge/endpoints` (plural, a typo). That update genuinely succeeded, so everyone reports \"the config was updated\" and \"the change went through\" in good faith.\n\nBut the parameter the application actually reads was never touched. It still holds the decommissioned v1 host, so the app dutifully targets a host that no longer exists and times out. This looks exactly like a network problem, which is why the ticket jumps to DNS and firewalls.\n\nThe bug lives in an unchecked assumption: *the config the app reads holds the new value*. Nobody verified it. They verified that *an* update happened, not that the *right parameter* now holds the *right value*.\n\n## Diagnostic Path\n\n### 1. Refuse the conclusion, test the assumption\n\nThe ticket asserts \"the config is definitely updated, so it's the network.\" That is a hypothesis stated as fact. Before touching DNS or firewalls, read the exact value the application reads:\n\n```bash\nawslocal ssm get-parameter \\\n  --name /payments/charge/endpoint \\\n  --query 'Parameter.Value' --output text\n```\n\n```\nhttps://api.payments-v1.internal/charge\n```\n\nThe assumption is false. The parameter still points at v1. There is no network mystery: the app is correctly reaching the address it was told to use, and that address is wrong. This single command collapses the entire \"it's the network\" theory.\n\n### 2. Find where the \"successful update\" actually went\n\nOps are not lying; an update did happen. List the parameters under the prefix to see what exists:\n\n```bash\nawslocal ssm get-parameters-by-path --path /payments/charge --recursive \\\n  --query 'Parameters[].[Name,Value]' --output text\n```\n\n```\n/payments/charge/endpoint    https://api.payments-v1.internal/charge\n/payments/charge/endpoints   https://api.payments-v2.internal/charge\n```\n\nThe new host landed in `/payments/charge/endpoints` (plural). The update was real but aimed at the wrong key. Assumption verified *and* the true cause located in one step.\n\n### 3. Confirm the network was never the problem\n\nOptional, but it closes the \"runner is caching DNS\" theory: the app resolves and connects fine to whatever host it is given. Point it at v2 and it works. There was nothing to fix in the network path.\n\n## Solution\n\nWrite the correct value to the parameter the application actually reads:\n\n```bash\nawslocal ssm put-parameter \\\n  --name /payments/charge/endpoint \\\n  --type String \\\n  --value \"https://api.payments-v2.internal/charge\" \\\n  --overwrite\n\n# Remove the typo'd parameter so it can't mislead the next person:\nawslocal ssm delete-parameter --name /payments/charge/endpoints\n```\n\nVerify:\n\n```bash\nawslocal ssm get-parameter --name /payments/charge/endpoint \\\n  --query 'Parameter.Value' --output text\n# https://api.payments-v2.internal/charge\n```\n\nThe app now reads the new host and the timeouts stop.\n\n## Triage Lessons\n\n- **Verify the assumption before you inherit the conclusion.** \"The config is updated, so it must be the network\" chains a fact you have not checked to a diagnosis you have not earned. Test the first link and the whole chain often collapses.\n- **\"An update succeeded\" is not \"the right thing was updated.\"** A green confirmation tells you a write happened, not that it happened to the key your app reads with the value it needs. Confirm the specific parameter, name and value.\n- **Read what the app reads, at the point it reads it.** Do not audit what *should* be configured; audit the exact source the running code consumes. The gap between the two is where these incidents live.\n- **A wrong config masquerades as a network fault.** Timeouts against a dead host look like DNS or firewall issues. Rule out the config the app targets before you send infra chasing packets.\n\n## Common Mistakes\n\n1. **Chasing DNS and firewalls first.** The ticket's suggested cause is the assumption, not the evidence. Investigating it wastes an infra team on a config typo.\n2. **Trusting \"the change went through.\"** It did, on the wrong parameter. Accepting the report at face value keeps the real key invisible.\n3. **Updating the wrong parameter again.** Writing the new value to `/payments/charge/endpoints` (plural) repeats the original mistake. Fix the key the app actually reads.\n4. **Restarting the service and hoping.** A restart re-reads the same stale parameter and times out identically. The value, not the process, is wrong.\n",
+      "files": [
+        {
+          "name": "lab-initialization.sh",
+          "language": "bash",
+          "content": "#!/bin/bash\n# Triage 12: Config assumed updated, but the app reads a stale value.\n#\n# The application reads its endpoint from SSM parameter:\n#     /payments/charge/endpoint   (singular)\n#\n# During the migration, Ops \"updated the endpoint\" — but they ran the update\n# against a typo'd path:\n#     /payments/charge/endpoints  (plural)\n#\n# So an update DID happen and DID succeed (\"the change went through\"), just on\n# the wrong parameter. The parameter the app actually reads still points at the\n# decommissioned v1 host. The team's assumption (\"the config is updated\") is\n# true for the wrong key and false for the one that matters.\n\nAWS_COMMAND=awslocal\n\n# The parameter the application actually reads — still holds the OLD host.\n$AWS_COMMAND ssm put-parameter \\\n  --name /payments/charge/endpoint \\\n  --type String \\\n  --value \"https://api.payments-v1.internal/charge\" \\\n  --overwrite >/dev/null\n\n# The parameter Ops updated by mistake (typo: plural \"endpoints\") — has the NEW host.\n$AWS_COMMAND ssm put-parameter \\\n  --name /payments/charge/endpoints \\\n  --type String \\\n  --value \"https://api.payments-v2.internal/charge\" \\\n  --overwrite >/dev/null\n\necho \"\"\necho \"Lab initialized.\"\necho \"  App reads parameter: /payments/charge/endpoint\"\necho \"\"\necho \"Ticket says: 'Ops updated the endpoint, so this must be a network issue.'\"\necho \"The parameter update is an assumption. Verify what the app actually reads.\"\necho \"\"\necho \"Try:\"\necho \"  awslocal ssm get-parameter --name /payments/charge/endpoint --query 'Parameter.Value' --output text\"\n"
+        }
+      ]
+    },
+    {
+      "name": "triage-13-find-the-bad-entry",
+      "section": "triage",
+      "service": "gitlab",
+      "difficulty": "intermediate",
+      "tags": [
+        "bisect",
+        "validation",
+        "json",
+        "config-registry",
+        "incident-response"
+      ],
+      "status": "complete",
+      "prerequisites": [
+        "gitlab-00-tutorial"
+      ],
+      "description": "Ticket: A 24-entry service registry fails validation with a vague, location-less error. Bisect the file to localize the one out-of-range entry in ~5 checks instead of reading all 24.",
+      "readme": "## Ticket\n\n**From:** DevOps Engineer\n**Priority:** Medium\n**Subject:** Config validation fails but won't tell us which service is wrong\n\n> Our service registry validation step started failing. The pipeline runs\n> `node validate.js services.json` and it just prints:\n>\n> `ERROR: service registry failed validation`\n>\n> That's it. No line number, no service name. The file has 24 services in\n> it and it's valid JSON (jq parses it fine), so we can't tell which entry\n> is broken. Someone added a batch of services in the last MR.\n>\n> We don't want to eyeball 24 entries by hand. How do we find the bad one\n> quickly?\n>\n> Files: services.json + validate.js in this directory\n\n### What You Know\n\n- The file is syntactically valid JSON — the failure is a semantic rule, not a parse error.\n- The validator gives a single vague message with no location.\n- There are 24 entries; exactly one violates a rule.\n- Reading all 24 by hand is slow. There is a faster way to localize the fault.\n\n### Your Task\n\n1. Run the validation and confirm the vague failure.\n2. Use bisection to narrow 24 entries down to the one bad entry, without reading them all.\n3. Fix the bad entry so validation passes.\n\n## Lab Setup\n\nNo infrastructure needed.\n\n```bash\ncd triage-13-find-the-bad-entry\ngitlab-ci-local\n```\n\n## Validation\n\n```bash\nnode validate.js services.json\n# Should print: \"OK: 24 services valid\"\n```\n\nOr run the full pipeline with `gitlab-ci-local` — the `validate` job should pass.\n\n## [Solution](../solutions/triage-13-find-the-bad-entry.md)\n",
+      "solution": "# Triage 13: Find the Bad Entry by Bisection\n\n## Root Cause\n\nOne service in `services.json` violates a registry rule: the `recommendations` entry declares `port: 70000`, which is outside the valid TCP range of 1 to 65535. The other 23 entries are valid.\n\nThe file is syntactically valid JSON, so `jq` and every parser accept it. The failure is a *semantic* rule check, and the validator reports it with a single vague message and no index or name. With 24 entries and no location hint, reading top to bottom is slow and error-prone. Bisection finds the offender in about `log2(24) ≈ 5` checks instead of up to 24.\n\n## Diagnostic Path\n\n### 1. Confirm the failure and rule out a parse error\n\n```bash\nnode validate.js services.json\n# ERROR: service registry failed validation\n\njq 'length' services.json\n# 24\n```\n\n`jq` parses the file, so this is not a JSON syntax problem. Exactly one entry breaks a rule the validator enforces, and the tool refuses to say which. That combination, a whole-collection pass/fail with no location, is the classic cue to bisect.\n\n### 2. Halve the collection and test each half\n\nThe validator accepts any array, so feed it slices. Split the 24 entries in two and validate each half:\n\n```bash\n# First half: entries 0..11\njq '.[0:12]' services.json > /tmp/half.json\nnode validate.js /tmp/half.json\n# OK: 12 services valid\n\n# Second half: entries 12..23\njq '.[12:24]' services.json > /tmp/half.json\nnode validate.js /tmp/half.json\n# ERROR: service registry failed validation\n```\n\nThe fault is in the second half. You just eliminated 12 entries with one comparison.\n\n### 3. Keep halving the failing side\n\n```bash\n# 12..17\njq '.[12:18]' services.json > /tmp/half.json && node validate.js /tmp/half.json\n# ERROR  → fault is in 12..17\n\n# 12..14\njq '.[12:15]' services.json > /tmp/half.json && node validate.js /tmp/half.json\n# OK     → fault is in 15..17\n\n# 15..16\njq '.[15:17]' services.json > /tmp/half.json && node validate.js /tmp/half.json\n# ERROR  → fault is index 15 or 16\n\n# just index 16\njq '.[16:17]' services.json > /tmp/half.json && node validate.js /tmp/half.json\n# ERROR  → index 16 is the bad entry\n```\n\nFive checks localize the offender. Inspect it:\n\n```bash\njq '.[16]' services.json\n# { \"name\": \"recommendations\", \"port\": 70000, \"weight\": 1.5 }\n```\n\n`port: 70000` is out of range.\n\n## Solution\n\nFix the offending entry's port to a valid value:\n\n```bash\njq '.[16].port = 8016' services.json > services.tmp && mv services.tmp services.json\n\nnode validate.js services.json\n# OK: 24 services valid\n```\n\nRun the pipeline to confirm:\n\n```bash\ngitlab-ci-local\n# validate job passes\n```\n\nLonger term, the real fix is the validator: it should name the failing index and rule (`service[16] \"recommendations\": port 70000 out of range 1-65535`). A validator that hides the location turns a one-line fix into a bisection hunt. Fixing the message means no one has to bisect this again.\n\n## Triage Lessons\n\n- **Bisection turns a linear search into a logarithmic one.** Halving 24 candidates costs about 5 checks, not 24. The bigger the collection, the more bisection wins: 1000 entries is ~10 checks.\n- **Bisect anything you can split and re-test:** entries in a config file, commits in a range (`git bisect`), lines in a payload, feature flags, or half a request path. The only requirement is a reliable pass/fail test.\n- **A valid parse does not mean valid content.** `jq` accepting the file rules out syntax and points you at semantic rules. Do not stop at \"the JSON is fine.\"\n- **A vague error is a signal about the tooling, not just the data.** When the fix is done, improve the validator to report location. The next incident should not require detective work the tool could have done.\n\n## Common Mistakes\n\n1. **Reading all 24 entries by hand.** Slow, and easy to skim past `70000`. Bisection is faster and does not rely on spotting the anomaly visually.\n2. **Blaming JSON syntax.** `jq` parses the file. The rule violation is semantic; a linter for syntax will never flag it.\n3. **Guessing at the newest entries first.** \"Someone added a batch last MR\" is a reasonable prior, but bisection confirms the location deterministically instead of hoping the newest entry is the bad one.\n4. **Fixing the symptom, ignoring the tool.** Patching the port unblocks today. Leaving the validator silent guarantees the same manual hunt next time a bad entry lands.\n",
+      "files": [
+        {
+          "name": ".gitlab-ci.yml",
+          "language": "yaml",
+          "content": "# The validate job rejects the whole registry with a vague message and no\n# location. The file is valid JSON, so jq is no help — exactly one entry\n# violates a semantic rule. Bisect services.json to localize it fast.\n\nstages:\n  - validate\n\nvalidate:\n  stage: validate\n  image: node:20-alpine\n  script:\n    - node validate.js services.json\n"
+        },
+        {
+          "name": "services.json",
+          "language": "json",
+          "content": "[\n  {\n    \"name\": \"auth\",\n    \"port\": 8000,\n    \"weight\": 1\n  },\n  {\n    \"name\": \"billing\",\n    \"port\": 8001,\n    \"weight\": 1.5\n  },\n  {\n    \"name\": \"catalog\",\n    \"port\": 8002,\n    \"weight\": 2\n  },\n  {\n    \"name\": \"checkout\",\n    \"port\": 8003,\n    \"weight\": 2.5\n  },\n  {\n    \"name\": \"delivery\",\n    \"port\": 8004,\n    \"weight\": 3\n  },\n  {\n    \"name\": \"email\",\n    \"port\": 8005,\n    \"weight\": 1\n  },\n  {\n    \"name\": \"fraud\",\n    \"port\": 8006,\n    \"weight\": 1.5\n  },\n  {\n    \"name\": \"gateway\",\n    \"port\": 8007,\n    \"weight\": 2\n  },\n  {\n    \"name\": \"inventory\",\n    \"port\": 8008,\n    \"weight\": 2.5\n  },\n  {\n    \"name\": \"invoices\",\n    \"port\": 8009,\n    \"weight\": 3\n  },\n  {\n    \"name\": \"loyalty\",\n    \"port\": 8010,\n    \"weight\": 1\n  },\n  {\n    \"name\": \"notifications\",\n    \"port\": 8011,\n    \"weight\": 1.5\n  },\n  {\n    \"name\": \"orders\",\n    \"port\": 8012,\n    \"weight\": 2\n  },\n  {\n    \"name\": \"payments\",\n    \"port\": 8013,\n    \"weight\": 2.5\n  },\n  {\n    \"name\": \"pricing\",\n    \"port\": 8014,\n    \"weight\": 3\n  },\n  {\n    \"name\": \"profiles\",\n    \"port\": 8015,\n    \"weight\": 1\n  },\n  {\n    \"name\": \"recommendations\",\n    \"port\": 70000,\n    \"weight\": 1.5\n  },\n  {\n    \"name\": \"reports\",\n    \"port\": 8017,\n    \"weight\": 2\n  },\n  {\n    \"name\": \"reviews\",\n    \"port\": 8018,\n    \"weight\": 2.5\n  },\n  {\n    \"name\": \"search\",\n    \"port\": 8019,\n    \"weight\": 3\n  },\n  {\n    \"name\": \"sessions\",\n    \"port\": 8020,\n    \"weight\": 1\n  },\n  {\n    \"name\": \"shipping\",\n    \"port\": 8021,\n    \"weight\": 1.5\n  },\n  {\n    \"name\": \"tax\",\n    \"port\": 8022,\n    \"weight\": 2\n  },\n  {\n    \"name\": \"wishlist\",\n    \"port\": 8023,\n    \"weight\": 2.5\n  }\n]\n"
+        },
+        {
+          "name": "validate.js",
+          "language": "javascript",
+          "content": "// Service registry validator.\n//\n// Reads a JSON array of services and checks each against the registry rules.\n// On any violation it exits 1 with a single vague message and NO location —\n// this is deliberately unhelpful, and it is why you bisect the file instead of\n// reading it top to bottom.\n//\n// Rules per service:\n//   - name:   non-empty string\n//   - port:   integer in the range 1..65535\n//   - weight: number in the range 0..100\n//\n// Because the validator accepts any array, you can split services.json into\n// halves, validate each half, and follow the failing half down to one entry.\n\nconst fs = require(\"fs\");\n\nconst path = process.argv[2];\nif (!path) {\n  console.error(\"usage: node validate.js <services.json>\");\n  process.exit(2);\n}\n\nlet services;\ntry {\n  services = JSON.parse(fs.readFileSync(path, \"utf8\"));\n} catch (e) {\n  console.error(\"ERROR: services file is not valid JSON\");\n  process.exit(2);\n}\n\nif (!Array.isArray(services)) {\n  console.error(\"ERROR: service registry must be a JSON array\");\n  process.exit(2);\n}\n\nfunction isValid(s) {\n  if (typeof s !== \"object\" || s === null) return false;\n  if (typeof s.name !== \"string\" || s.name.length === 0) return false;\n  if (!Number.isInteger(s.port) || s.port < 1 || s.port > 65535) return false;\n  if (typeof s.weight !== \"number\" || s.weight < 0 || s.weight > 100) return false;\n  return true;\n}\n\nconst allValid = services.every(isValid);\n\nif (!allValid) {\n  console.error(\"ERROR: service registry failed validation\");\n  process.exit(1);\n}\n\nconsole.log(`OK: ${services.length} services valid`);\n"
+        }
+      ]
     }
   ],
   "quizzes": [
@@ -1214,6 +1620,146 @@
           "answer": 25,
           "accept": [
             "25"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "first-response",
+      "topic": "First Response — AWS Incidents",
+      "section": "aws",
+      "difficulty": "intermediate",
+      "related_drills": [
+        "lambda-01-timeout-configuration",
+        "sqs-01-message-not-consumed",
+        "apigw-01-cors-errors"
+      ],
+      "questions": [
+        {
+          "id": "aws-fr-01",
+          "type": "diagnose",
+          "prompt": "A Lambda function returns \"Task timed out after 3.00 seconds\".\nThe function makes an HTTP call to an external API.\nWhat do you check first?",
+          "explanation": "The error says the timeout is 3 seconds. First, check if the configured timeout matches the expected execution time. An HTTP call can exceed 3 seconds due to DNS, TLS, and network latency.",
+          "options": {
+            "a": "Check if the function has the right IAM permissions",
+            "b": "Check the function's timeout configuration and compare it to the expected execution time",
+            "c": "Redeploy the function from scratch",
+            "d": "Check if the external API is down by visiting it in a browser"
+          },
+          "answer": "b"
+        },
+        {
+          "id": "aws-fr-02",
+          "type": "diagnose",
+          "prompt": "SQS messages are piling up and the Lambda consumer never fires.\nThe function was working last week. What do you check first?",
+          "explanation": "If the Lambda never fires, check the event source mapping. It might point to the wrong queue (e.g., the DLQ) or be disabled. Always verify the mapping first.",
+          "options": {
+            "a": "Delete the queue and recreate it",
+            "b": "Check the event source mapping — verify it points to the correct queue ARN",
+            "c": "Increase the queue's visibility timeout",
+            "d": "Check the Lambda function's code for syntax errors"
+          },
+          "answer": "b"
+        },
+        {
+          "id": "aws-fr-03",
+          "type": "diagnose",
+          "prompt": "An API works perfectly from curl but fails in the browser with a CORS\nerror. What do you check first?",
+          "explanation": "Browsers enforce CORS; curl ignores it. The browser sends a preflight OPTIONS request first. Verify API Gateway has an OPTIONS method and Lambda returns Access-Control-Allow-Origin headers.",
+          "options": {
+            "a": "Check if the browser has an ad blocker",
+            "b": "Check if the API Gateway has an OPTIONS method and if the Lambda returns CORS headers",
+            "c": "Switch to a different browser",
+            "d": "Add --cors to the curl command to reproduce the error"
+          },
+          "answer": "b"
+        },
+        {
+          "id": "aws-fr-04",
+          "type": "diagnose",
+          "prompt": "A user reports \"Access Denied\" when uploading to S3. They have\ns3:PutObject in their IAM policy. What do you check first?",
+          "explanation": "An explicit Deny in a bucket policy overrides any IAM Allow. Bucket policies often add conditions like requiring encryption headers or restricting IP ranges. Check the bucket policy for Deny statements and their conditions.",
+          "options": {
+            "a": "Check if the bucket exists",
+            "b": "Check the bucket policy for explicit Deny statements or conditions",
+            "c": "Have the user try a different bucket",
+            "d": "Check if S3 is experiencing an outage"
+          },
+          "answer": "b"
+        },
+        {
+          "id": "aws-fr-05",
+          "type": "diagnose",
+          "prompt": "A CloudFormation stack creation fails with \"No export named VpcId found\".\nThe networking stack that should export this value exists. What do you\ncheck first?",
+          "explanation": "An Output without an Export block is visible via describe-stacks but cannot be consumed by other stacks via Fn::ImportValue. Check that the networking stack defines both the Output and the Export with the expected name.",
+          "options": {
+            "a": "Check if the networking stack has an Outputs section with Export blocks",
+            "b": "Delete both stacks and recreate them",
+            "c": "Check if CloudFormation has permission to read the export",
+            "d": "Rename the export to match exactly"
+          },
+          "answer": "a"
+        },
+        {
+          "id": "aws-fr-06",
+          "type": "diagnose",
+          "prompt": "DynamoDB reads are getting throttled. The table uses provisioned\ncapacity with 5 RCUs. Reads are 4KB items using eventually consistent\nreads. The app reads about 10 items per second. What do you check first?",
+          "explanation": "Each 4KB eventually-consistent read costs 0.5 RCU. 10 reads/second = 5 RCUs. At exactly 5 RCU provisioned, any burst above 10 reads/second triggers throttling. The math should be the first check before changing capacity mode or adding caching layers.",
+          "options": {
+            "a": "Switch to on-demand capacity mode",
+            "b": "Calculate whether 5 RCUs can handle 10 eventually-consistent reads per second",
+            "c": "Enable DynamoDB Accelerator (DAX)",
+            "d": "Increase the item size to reduce the number of reads"
+          },
+          "answer": "b"
+        },
+        {
+          "id": "aws-fr-07",
+          "type": "diagnose",
+          "prompt": "A Lambda function in a VPC can connect to RDS but all external API\ncalls time out. The function has a 60-second timeout. What do you\ncheck first?",
+          "explanation": "VPC Lambdas use ENIs in the specified subnet. If the subnet is private without a NAT Gateway, there is no route to the internet. RDS works because it is inside the VPC. External calls need a NAT Gateway in a public subnet with proper routing.",
+          "options": {
+            "a": "Check if the security group allows outbound traffic on port 443",
+            "b": "Check if the subnet has a NAT Gateway or VPC endpoint for internet access",
+            "c": "Increase the timeout to 300 seconds",
+            "d": "Check if the external API is blocking AWS IP ranges"
+          },
+          "answer": "b"
+        },
+        {
+          "id": "aws-fr-08",
+          "type": "match",
+          "prompt": "Match each AWS symptom to the most likely first diagnostic command.",
+          "explanation": "Each symptom has a specific diagnostic entry point. Lambda timeouts: check the timeout config. S3 Access Denied: check bucket policies. SQS not consumed: check event source mappings. CloudFormation exports: check the source stack's Outputs section.",
+          "left": [
+            "Lambda timeout error",
+            "S3 Access Denied",
+            "SQS messages not consumed",
+            "CloudFormation export not found"
+          ],
+          "right": [
+            "get-function-configuration (check timeout)",
+            "get-bucket-policy (check deny conditions)",
+            "list-event-source-mappings (check queue ARN)",
+            "describe-stacks (check Outputs and Exports)"
+          ],
+          "pairs": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              2,
+              2
+            ],
+            [
+              3,
+              3
+            ]
           ]
         }
       ]
@@ -1658,6 +2204,123 @@
       ]
     },
     {
+      "id": "spot-the-error",
+      "topic": "Spot the Error — AWS CLI",
+      "section": "aws",
+      "difficulty": "beginner",
+      "related_drills": [
+        "iam-01-assume-role-issue",
+        "lambda-01-timeout-configuration",
+        "s3-01-bucket-does-not-appear"
+      ],
+      "questions": [
+        {
+          "id": "aws-ste-01",
+          "type": "diagnose",
+          "prompt": "Spot the error:\n\n  awslocal cloudformation create-stack --stack-name my-stack --template-body template.yaml\n\nFails with \"Invalid template body\". The file exists and is valid.",
+          "explanation": "The --template-body flag sends a string value. To read from a local file, prefix the path with file:// so the CLI reads the file content. Without it, the literal string \"template.yaml\" is sent as the template body.",
+          "options": {
+            "a": "--stack-name cannot contain hyphens",
+            "b": "--template-body requires a file:// prefix (file://template.yaml)",
+            "c": "The command should be create-change-set, not create-stack",
+            "d": "--template-body only accepts S3 URLs"
+          },
+          "answer": "b"
+        },
+        {
+          "id": "aws-ste-02",
+          "type": "diagnose",
+          "prompt": "Spot the error:\n\n  awslocal iam create-role --role-name MyRole --assume-role-policy-document trust-policy.json\n\nFails with \"MalformedPolicyDocument\". The JSON file is valid.",
+          "explanation": "Like --template-body, the --assume-role-policy-document flag needs file:// to read from a local file. Without it, the literal filename string is sent as the policy document, which is not valid JSON.",
+          "options": {
+            "a": "--role-name must be lowercase",
+            "b": "The flag should be --policy-document",
+            "c": "--assume-role-policy-document requires file:// prefix",
+            "d": "You must also pass --path /"
+          },
+          "answer": "c"
+        },
+        {
+          "id": "aws-ste-03",
+          "type": "diagnose",
+          "prompt": "Spot the error in this ARN:\n\n  awslocal sts assume-role --role-arn arn:aws:iam:000000000000:role/MyRole --role-session-name Test\n\nFails with \"Invalid ARN\".",
+          "explanation": "IAM ARNs use a double colon between the service and account ID because the region field is empty (IAM is global). Correct format: arn:aws:iam::000000000000:role/MyRole",
+          "options": {
+            "a": "The service should be \"sts\", not \"iam\"",
+            "b": "The ARN needs a double colon — iam::000000000000",
+            "c": "--role-session-name is not a valid parameter",
+            "d": "The role path should be /role/MyRole"
+          },
+          "answer": "b"
+        },
+        {
+          "id": "aws-ste-04",
+          "type": "diagnose",
+          "prompt": "Spot the error:\n\n  awslocal lambda update-function-code --function-name my-func --zip-file lambda.zip\n\nFails with \"Could not unzip uploaded code\". The zip is valid.",
+          "explanation": "The --zip-file flag requires fileb:// to read binary data from a local file. file:// is for text (JSON policies), fileb:// is for binary (zips). Without it, the literal string \"lambda.zip\" is sent as the zip content.",
+          "options": {
+            "a": "The flag should be --code",
+            "b": "--zip-file requires fileb:// prefix for binary files",
+            "c": "You must also pass --handler and --runtime",
+            "d": "The zip must be base64-encoded first"
+          },
+          "answer": "b"
+        },
+        {
+          "id": "aws-ste-05",
+          "type": "diagnose",
+          "prompt": "Spot the error:\n\n  awslocal ec2 describe-instances --filter Name=instance-state-name,Values=running\n\nFails with \"Unknown options: Name=instance-state-name,Values=running\".",
+          "explanation": "EC2 describe-instances uses --filters (plural). Some AWS commands use singular --filter while others use plural --filters. EC2 commands consistently use --filters.",
+          "options": {
+            "a": "The flag is --filters (plural), not --filter",
+            "b": "The syntax should use = instead of , between Name and Values",
+            "c": "Values should be quoted as Values=\"running\"",
+            "d": "instance-state-name is not a valid filter"
+          },
+          "answer": "a"
+        },
+        {
+          "id": "aws-ste-06",
+          "type": "diagnose",
+          "prompt": "Spot the error:\n\n  awslocal sqs send-message --queue-url http://localhost:4566/000000000000/my-queue --message-body {\"orderId\": \"123\"}\n\nThe shell returns a syntax error or the message body is mangled.",
+          "explanation": "Without quotes, the shell interprets curly braces, colons, and spaces as special characters. Wrap JSON in single quotes: --message-body '{\"orderId\": \"123\"}'",
+          "options": {
+            "a": "--message-body must be base64-encoded",
+            "b": "The queue URL format is wrong for LocalStack",
+            "c": "The JSON must be wrapped in single quotes to prevent shell expansion",
+            "d": "--message-body only accepts plain strings, not JSON"
+          },
+          "answer": "c"
+        },
+        {
+          "id": "aws-ste-07",
+          "type": "diagnose",
+          "prompt": "Spot the error:\n\n  awslocal s3api put-bucket-policy --bucket my-bucket --policy policy.json\n\nFails with \"Invalid JSON\". The file policy.json is valid.",
+          "explanation": "The --policy parameter expects a JSON string. To read from a file, use the file:// prefix. Same pattern as --template-body and --assume-role-policy-document.",
+          "options": {
+            "a": "The bucket does not exist yet",
+            "b": "--policy requires file:// prefix (file://policy.json)",
+            "c": "The flag should be --bucket-policy",
+            "d": "put-bucket-policy requires --content-type"
+          },
+          "answer": "b"
+        },
+        {
+          "id": "aws-ste-08",
+          "type": "diagnose",
+          "prompt": "Spot the error:\n\n  awslocal lambda invoke --function my-func /tmp/response.json\n\nFails with \"argument --function-name is required\".",
+          "explanation": "The correct flag is --function-name, not --function. There is no shorthand --function for the invoke command. The AWS CLI requires the full flag name.",
+          "options": {
+            "a": "The output file must use --output-file flag",
+            "b": "lambda invoke requires --payload even if empty",
+            "c": "The flag is --function-name, not --function",
+            "d": "The output path must be in the current directory"
+          },
+          "answer": "c"
+        }
+      ]
+    },
+    {
       "id": "sqs-patterns",
       "topic": "SQS Patterns",
       "section": "aws",
@@ -1940,6 +2603,39 @@
       ]
     },
     {
+      "id": "aws-solutions-associate-mock",
+      "topic": "aws-solutions-associate-mock",
+      "section": "aws",
+      "difficulty": "beginner",
+      "related_drills": [],
+      "questions": [
+        {
+          "id": "cert-sa-01",
+          "type": "scenario",
+          "prompt": "A company's application runs on Amazon EC2 instances behind an Application Load Balancer.\nThe instances run in an Auto Scaling group across multiple Availability Zones.\nThe application stores data in an Amazon RDS MySQL database instance.\n\nThe application experiences performance issues during periods of high traffic.\nAnalysis shows that the database is the bottleneck. Which solution will improve database performance?",
+          "explanation": "ElastiCache provides in-memory caching to reduce database load, improving performance for read-heavy workloads by serving frequently accessed data from cache instead of the database."
+        },
+        {
+          "id": "cert-sa-02",
+          "type": "scenario",
+          "prompt": "A solutions architect needs to design a secure way for users to access an application running on EC2 instances.\nThe users are remote employees with dynamic IP addresses. Which approach provides the most secure access?",
+          "explanation": "AWS Client VPN provides secure, managed access for remote users. It uses OpenVPN protocol, integrates with AD/LDAP, and provides audit logging - much more secure than static IP rules or open access."
+        },
+        {
+          "id": "cert-sa-03",
+          "type": "chain",
+          "prompt": "You need to design a serverless web application. Step 1: Which service should handle the web frontend?",
+          "explanation": "Amazon S3 static website hosting is the most cost-effective and scalable solution for hosting static web content like HTML, CSS, and JavaScript."
+        },
+        {
+          "id": "cert-sa-03b",
+          "type": "chain",
+          "prompt": "Step 2: The frontend needs to call backend APIs. Which service should host the backend logic?",
+          "explanation": "Lambda functions with API Gateway provide a true serverless backend - no server management, automatic scaling, and pay-per-request pricing. Perfect for variable web traffic."
+        }
+      ]
+    },
+    {
       "id": "yaml-quoting",
       "topic": "GitLab CI/CD YAML Quoting and Special Characters",
       "section": "gitlab",
@@ -2176,6 +2872,146 @@
             "50",
             "70",
             "80"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "first-response",
+      "topic": "First Response — Kubernetes Incidents",
+      "section": "kubernetes",
+      "difficulty": "intermediate",
+      "related_drills": [
+        "k8s-01-deployment-not-starting",
+        "k8s-02-resource-limits-oom",
+        "k8s-04-service-selector-mismatch"
+      ],
+      "questions": [
+        {
+          "id": "k8s-fr-01",
+          "type": "diagnose",
+          "prompt": "A pod is in CrashLoopBackOff. You have no other context.\nWhat do you run first?",
+          "explanation": "kubectl describe pod reveals events, last termination reason, exit code, and container state — whether the crash is OOMKilled, a failed probe, a missing volume, or an app error. Always describe before deleting.",
+          "options": {
+            "a": "kubectl delete pod — let it restart fresh",
+            "b": "kubectl describe pod — check events and last state",
+            "c": "kubectl get nodes — check if the node is healthy",
+            "d": "kubectl apply -f — redeploy the manifest"
+          },
+          "answer": "b"
+        },
+        {
+          "id": "k8s-fr-02",
+          "type": "diagnose",
+          "prompt": "A Service returns \"connection refused\" for some requests. Pods are\nRunning and show 1/1 Ready. What do you check first?",
+          "explanation": "\"Connection refused\" means the connection reaches an IP but nothing listens on that port. Check endpoints to verify the Service maps to the correct pod IPs and ports. A selector mismatch or wrong targetPort causes empty or misconfigured endpoints.",
+          "options": {
+            "a": "Check if the Service type should be LoadBalancer instead of ClusterIP",
+            "b": "Check kubectl get endpoints to verify the Service has the right pod IPs and ports",
+            "c": "Restart all pods behind the Service",
+            "d": "Check DNS resolution of the Service name"
+          },
+          "answer": "b"
+        },
+        {
+          "id": "k8s-fr-03",
+          "type": "diagnose",
+          "prompt": "After a namespace migration, an app reports \"getaddrinfo ENOTFOUND\ndatabase-service\". The database is running in another namespace.\nWhat do you check first?",
+          "explanation": "Short hostnames resolve within the current namespace only. After moving to a different namespace, \"database-service\" resolves as database-service.<new-namespace>.svc.cluster.local, which does not exist. Use the FQDN: database-service.<target-namespace>.svc.cluster.local.",
+          "options": {
+            "a": "Check if a NetworkPolicy is blocking DNS traffic",
+            "b": "Check if the app uses a short hostname instead of the FQDN for cross-namespace DNS",
+            "c": "Restart CoreDNS pods",
+            "d": "Check if the database namespace has a DNS policy"
+          },
+          "answer": "b"
+        },
+        {
+          "id": "k8s-fr-04",
+          "type": "diagnose",
+          "prompt": "A rollout undo \"succeeded\" but pods are still in CrashLoopBackOff.\nWhat do you check first?",
+          "explanation": "Rollout undo reverts the Deployment spec (image, env, mounts) but leaves deleted ConfigMaps, Secrets, and PVCs deleted. If the old version used a ConfigMap that no longer exists, pods crash. Check pod events for \"not found\" errors.",
+          "options": {
+            "a": "Run the rollout undo again with --force",
+            "b": "Check if the rolled-back version depends on resources (ConfigMaps, Secrets) that no longer exist",
+            "c": "Delete the Deployment and recreate it",
+            "d": "Scale the Deployment to 0 and back to the desired count"
+          },
+          "answer": "b"
+        },
+        {
+          "id": "k8s-fr-05",
+          "type": "diagnose",
+          "prompt": "An HPA shows \"unknown\" for CPU metrics and never scales.\nWhat do you check first?",
+          "explanation": "HPA requires Metrics Server to collect CPU and memory metrics. If Metrics Server is not installed, HPA cannot read metrics and shows \"unknown\". Also check that the Deployment has resource requests defined — HPA calculates utilization as a percentage of requests.",
+          "options": {
+            "a": "Check if Metrics Server is installed and running",
+            "b": "Increase the HPA maxReplicas",
+            "c": "Add a liveness probe to the pods",
+            "d": "Check if the cluster has enough nodes"
+          },
+          "answer": "a"
+        },
+        {
+          "id": "k8s-fr-06",
+          "type": "diagnose",
+          "prompt": "A pod is stuck in Pending for several minutes. No events appear\nwhen you describe it. What do you check first?",
+          "explanation": "A Pending pod with no events means the scheduler cannot find a suitable node. Common causes: insufficient CPU/memory on all nodes, node taints without matching tolerations, or pod affinity rules that cannot be satisfied. Check node resource availability first.",
+          "options": {
+            "a": "kubectl get nodes — check if nodes have enough resources",
+            "b": "Delete the pod and let it be rescheduled",
+            "c": "Check if the image is correct",
+            "d": "Add tolerations to the pod spec"
+          },
+          "answer": "a"
+        },
+        {
+          "id": "k8s-fr-07",
+          "type": "diagnose",
+          "prompt": "You see \"Forbidden\" errors when a pod tries to call the Kubernetes API.\nThe pod uses a custom ServiceAccount. What do you check first?",
+          "explanation": "Forbidden means the ServiceAccount lacks the required RBAC permissions. Check if a Role (or ClusterRole) with the needed verbs/resources exists and if a RoleBinding (or ClusterRoleBinding) binds it to the ServiceAccount. No binding = no permissions.",
+          "options": {
+            "a": "Check if the ServiceAccount exists in the same namespace",
+            "b": "Check if a Role and RoleBinding (or ClusterRole/ClusterRoleBinding) grant the needed permissions",
+            "c": "Restart the kube-apiserver",
+            "d": "Change the pod to use the default ServiceAccount"
+          },
+          "answer": "b"
+        },
+        {
+          "id": "k8s-fr-08",
+          "type": "match",
+          "prompt": "Match each Kubernetes symptom to the first diagnostic command.",
+          "explanation": "CrashLoopBackOff: describe pod reveals exit codes and termination reason. No endpoints: check if Service selector matches pod labels. Pending with no events: scheduler cannot place the pod, check node capacity. ImagePullBackOff: describe pod shows the exact image name and registry error.",
+          "left": [
+            "CrashLoopBackOff",
+            "Service no endpoints",
+            "Pod Pending (no events)",
+            "ImagePullBackOff"
+          ],
+          "right": [
+            "kubectl describe pod (check events + exit code)",
+            "kubectl get endpoints (check selector match)",
+            "kubectl describe nodes (check resource pressure)",
+            "kubectl describe pod (check image name + registry)"
+          ],
+          "pairs": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              2,
+              2
+            ],
+            [
+              3,
+              3
+            ]
           ]
         }
       ]

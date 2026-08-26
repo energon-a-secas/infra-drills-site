@@ -337,7 +337,7 @@ drills:
     section: triage
     service: aws
     difficulty: intermediate
-    tags: [lambda, handler, api-gateway, 502, incident-response]
+    tags: [lambda, handler, api-gateway, "502", incident-response]
     status: complete
     prerequisites: [lambda-01-timeout-configuration]
     description: >
