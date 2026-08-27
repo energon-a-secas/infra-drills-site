@@ -10,6 +10,16 @@ on:
       - 'gitlab/**'
       - 'scripts/build-site.py'
       - 'docs/**'
+      # build-site.py also reads these, so a change here alters the built
+      # artifact. Without them the deploy never fires, the site keeps serving
+      # the previous build, and nothing reports it.
+      - 'css/**'
+      - 'js/**'
+      - 'llms.txt'
+      - 'sitemap.xml'
+      - 'robots.txt'
+      - 'og-preview.jpg'
+      - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
 permissions:
