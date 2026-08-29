@@ -47,9 +47,9 @@ DAG pipelines can be significantly faster because jobs start as soon as their sp
 
 | Feature | `needs` | `dependencies` |
 |---|---|---|
-| Controls execution order | Yes — job waits for listed jobs | No — only controls artifact download |
+| Controls execution order | Yes: job waits for listed jobs | No, only controls artifact download |
 | Enables DAG mode | Yes | No |
-| Validates job names | Yes — fails pipeline if name doesn't match | Yes — fails pipeline if name doesn't match |
+| Validates job names | Yes: fails pipeline if name doesn't match | Yes, fails pipeline if name doesn't match |
 | Downloads artifacts | Yes (by default) | Yes |
 | Can skip artifact download | Yes, with `artifacts: false` | No |
 
@@ -78,12 +78,12 @@ gitlab-ci-local
 
 ## Common Mistakes
 
-1. **Typos in job names** — This is the most common cause of `needs` failures. Job names must match exactly, including pluralization, hyphens, and casing. This is the bug in this drill.
-2. **Referencing jobs from child pipelines** — `needs` can only reference jobs in the same pipeline by default. Cross-pipeline `needs` requires `needs:pipeline` syntax.
-3. **Creating circular dependencies** — If job A needs job B and job B needs job A, the pipeline fails. GitLab validates that the dependency graph is acyclic.
-4. **Exceeding the `needs` limit** — By default, a job can list a maximum of 50 jobs in `needs`. This limit can be changed by administrators.
-5. **Confusing `needs` with `dependencies`** — Using `dependencies` when you want execution ordering won't work. `dependencies` only controls artifact downloading; it doesn't change when jobs run.
-6. **Forgetting that `needs` bypasses stage ordering** — A job with `needs` can run before jobs in earlier stages if its dependencies are met. This can cause surprising behavior if not well understood.
+1. **Typos in job names**: This is the most common cause of `needs` failures. Job names must match exactly, including pluralization, hyphens, and casing. This is the bug in this drill.
+2. **Referencing jobs from child pipelines**, `needs` can only reference jobs in the same pipeline by default. Cross-pipeline `needs` requires `needs:pipeline` syntax.
+3. **Creating circular dependencies**: If job A needs job B and job B needs job A, the pipeline fails. GitLab validates that the dependency graph is acyclic.
+4. **Exceeding the `needs` limit**: By default, a job can list a maximum of 50 jobs in `needs`. This limit can be changed by administrators.
+5. **Confusing `needs` with `dependencies`**: Using `dependencies` when you want execution ordering won't work. `dependencies` only controls artifact downloading; it doesn't change when jobs run.
+6. **Forgetting that `needs` bypasses stage ordering**. A job with `needs` can run before jobs in earlier stages if its dependencies are met. This can cause surprising behavior if not well understood.
 
 ## Additional Resources
 

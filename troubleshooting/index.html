@@ -7,14 +7,14 @@
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
   <title>Troubleshooting Framework | Infra Drills</title>
-  <meta name="description" content="A field-tested framework for troubleshooting infrastructure incidents under pressure. Match the scenario to the strategy — comparison, discarding, time correlation, rollback — and tie it to hands-on drills.">
-  <meta property="og:title" content="The Troubleshooting Framework — Infra Drills">
+  <meta name="description" content="A field-tested framework for troubleshooting infrastructure incidents under pressure. Match the scenario to the strategy, comparison, discarding, time correlation, rollback, and tie it to hands-on drills.">
+  <meta property="og:title" content="The Troubleshooting Framework, Infra Drills">
   <meta property="og:description" content="Match the scenario to the strategy. A field-tested method for debugging AWS, Kubernetes, and GitLab incidents under pressure.">
   <meta property="og:type" content="article">
   <meta property="og:url" content="https://infradrills.neorgon.com/troubleshooting/">
   <meta property="og:site_name" content="Neorgon">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="The Troubleshooting Framework — Infra Drills">
+  <meta name="twitter:title" content="The Troubleshooting Framework, Infra Drills">
   <meta name="twitter:description" content="Match the scenario to the strategy. A field-tested method for debugging incidents under pressure.">
   <meta name="twitter:image" content="https://infradrills.neorgon.com/og-preview.jpg">
   <meta name="robots" content="index, follow">
@@ -61,7 +61,7 @@
       --radius-sm: 6px; --radius: 10px; --radius-lg: 15px;
       --ease-snap: cubic-bezier(0.34, 1.56, 0.64, 1);
       --dur-fast: 120ms; --dur: 200ms;
-      /* Phase ramp — one analogous sweep through the brand's magenta→indigo→blue arc.
+      /* Phase ramp: one analogous sweep through the brand's magenta→indigo→blue arc.
          Sequential, low-chroma, dark-bg legible. Reads as a considered system, not a rainbow. */
       --p-assess:     oklch(0.81 0.105 352);
       --p-orient:     oklch(0.81 0.105 330);
@@ -501,20 +501,20 @@
         A framework, not a checklist
       </div>
       <h2>Something's broken.<br><span>Here's how to think.</span></h2>
-      <p>Every incident is different, but the way you approach it doesn't have to be. Match the symptom to the strategy — comparison, discarding, time correlation, rollback — then practice it on a real broken environment.</p>
+      <p>Every incident is different, but the way you approach it doesn't have to be. Match the symptom to the strategy, comparison, discarding, time correlation, rollback, then practice it on a real broken environment.</p>
     </div>
 
     <!-- The Loop -->
     <div class="section-heading">The Loop · How an incident actually flows</div>
-    <p class="section-lead">Good troubleshooting is a loop you run under pressure: <strong>assess before you touch anything</strong>, orient on what changed, isolate the cause by elimination, resolve (or fall back), then feed what you learned back in. Panic skips straight to "resolve" — and usually makes it worse.</p>
+    <p class="section-lead">Good troubleshooting is a loop you run under pressure: <strong>assess before you touch anything</strong>, orient on what changed, isolate the cause by elimination, resolve (or fall back), then feed what you learned back in. Panic skips straight to "resolve", and usually makes it worse.</p>
     <div class="loop" id="loop"></div>
 
     <!-- Scenario matcher -->
     <div class="section-heading" id="matcher">Scenario → Strategy · Match the situation to the method</div>
-    <p class="section-lead matcher-intro">The situation tells you which strategy to reach for first. Pick what you're seeing — you'll get an ordered set of moves and the drills that let you rehearse them.</p>
+    <p class="section-lead matcher-intro">The situation tells you which strategy to reach for first. Pick what you're seeing. You'll get an ordered set of moves and the drills that let you rehearse them.</p>
     <div class="scenario-chips" id="scenarioChips" role="tablist" aria-label="Incident scenarios"></div>
     <div class="matcher-panel" id="matcherPanel" role="region" aria-live="polite">
-      <div class="matcher-empty">Pick a scenario above. Each one maps to the strategies that resolve it fastest — and the hands-on drills where you can practice.</div>
+      <div class="matcher-empty">Pick a scenario above. Each one maps to the strategies that resolve it fastest, and the hands-on drills where you can practice.</div>
     </div>
 
     <!-- Methods library -->
@@ -523,7 +523,7 @@
     <div class="methods-toolbar">
       <div class="search-wrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="methodSearch" placeholder="Search methods — e.g. 'compare', 'logs', 'rollback'…" autocomplete="off" aria-label="Search methods">
+        <input type="text" id="methodSearch" placeholder="Search methods, e.g. 'compare', 'logs', 'rollback'…" autocomplete="off" aria-label="Search methods">
       </div>
       <div class="filter-chips" id="phaseFilters"></div>
     </div>
@@ -532,7 +532,7 @@
 
     <!-- Escalation ladder -->
     <div class="section-heading">The Escalation Ladder · Where to look, in order</div>
-    <p class="section-lead">When you don't know where the problem lives, walk the ladder from your side of the fence outward. Most incidents resolve on the first two rungs — the discipline is asking the right questions before blaming the layer below you.</p>
+    <p class="section-lead">When you don't know where the problem lives, walk the ladder from your side of the fence outward. Most incidents resolve on the first two rungs. The discipline is asking the right questions before blaming the layer below you.</p>
     <div class="ladder" id="ladder"></div>
 
     <!-- Plan B -->

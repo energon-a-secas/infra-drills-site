@@ -25,7 +25,7 @@ The deploy job runs `mkdir -p /opt/app/config`. In `node:20-alpine`, the default
 
 ### 3. Identify the fix
 
-The script should write to a directory the CI user controls — the project workspace, a temp directory, or `$CI_PROJECT_DIR`.
+The script should write to a directory the CI user controls. The project workspace, a temp directory, or `$CI_PROJECT_DIR`.
 
 ## Solution
 
@@ -72,13 +72,13 @@ When a script works locally but fails in CI, check these differences:
 
 ## Triage Lessons
 
-- **"The CI runner must be broken" usually means the script assumes local privileges.** The runner is working correctly — it runs the script in a controlled environment that is different from a developer laptop.
+- **"The CI runner must be broken" usually means the script assumes local privileges.** The runner is working correctly. It runs the script in a controlled environment that is different from a developer laptop.
 - **Write to relative paths or $CI_PROJECT_DIR.** Avoid hardcoded system paths (/opt, /usr/local, /etc) in CI scripts unless the image explicitly supports it.
 - **Test scripts inside the same container image locally.** Run `docker run --rm -it node:20-alpine sh` and try the commands there. This reproduces the CI environment.
 
 ## Common Mistakes
 
-1. **Adding `sudo` to CI scripts** — Most CI images do not have sudo installed. Even if they do, running as root in CI is a security risk.
-2. **Switching to a root-based image** — This masks the problem. The script should not require root for deploying config files.
-3. **Blaming the artifact passing** — The settings.json file is passed correctly via artifacts. The failure is in the destination path, not the source.
-4. **Not reading the error message** — "Permission denied" on a mkdir tells you exactly what happened. The path is not writable.
+1. **Adding `sudo` to CI scripts**: Most CI images do not have sudo installed. Even if they do, running as root in CI is a security risk.
+2. **Switching to a root-based image**: This masks the problem. The script should not require root for deploying config files.
+3. **Blaming the artifact passing**: The settings.json file is passed correctly via artifacts. The failure is in the destination path, not the source.
+4. **Not reading the error message**: "Permission denied" on a mkdir tells you exactly what happened. The path is not writable.

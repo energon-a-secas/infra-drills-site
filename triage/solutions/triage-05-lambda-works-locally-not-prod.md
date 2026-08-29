@@ -2,7 +2,7 @@
 
 ## Root Cause
 
-A Lambda function in a VPC is placed in a private subnet. The subnet's route table has no route to the internet — no NAT Gateway, no VPC endpoint. When the function tries to call `api.github.com`, the TCP connection hangs until the Lambda timeout kills it.
+A Lambda function in a VPC is placed in a private subnet. The subnet's route table has no route to the internet. No NAT Gateway, no VPC endpoint. When the function tries to call `api.github.com`, the TCP connection hangs until the Lambda timeout kills it.
 
 Outside a VPC, Lambda has direct internet access through AWS's managed networking. Inside a VPC, Lambda gets an ENI (Elastic Network Interface) in the specified subnet and follows that subnet's routing rules. A private subnet without a NAT Gateway has no path to the public internet.
 
@@ -77,7 +77,7 @@ The mental model that trips people up:
 | Lambda **in VPC**, public subnet | **No** | Lambda ENIs never get public IPs, even in public subnets |
 | Lambda **in VPC**, private subnet + NAT | Yes | Traffic routes through NAT Gateway in the public subnet |
 
-Putting a Lambda in a **public** subnet does NOT give it internet access — Lambda ENIs never receive public IPs. You must route through a NAT Gateway regardless.
+Putting a Lambda in a **public** subnet does NOT give it internet access, Lambda ENIs never receive public IPs. You must route through a NAT Gateway regardless.
 
 ## Triage Lessons
 
@@ -87,10 +87,10 @@ Putting a Lambda in a **public** subnet does NOT give it internet access — Lam
 
 ## Common Mistakes
 
-1. **Putting Lambda in a public subnet** — Lambda ENIs never get public IPs. A public subnet alone does not help.
-2. **Increasing the timeout** — The team already tried this. The connection is not slow; it's blocked.
-3. **Blaming DNS** — DNS resolution may actually work (VPC has default DNS). The TCP connection to the resolved IP is what fails.
-4. **Removing VPC configuration** — This fixes the symptom but loses access to VPC resources (RDS, ElastiCache, etc.) that required VPC placement in the first place.
+1. **Putting Lambda in a public subnet**: Lambda ENIs never get public IPs. A public subnet alone does not help.
+2. **Increasing the timeout**: The team already tried this. The connection is not slow; it's blocked.
+3. **Blaming DNS**: DNS resolution may actually work (VPC has default DNS). The TCP connection to the resolved IP is what fails.
+4. **Removing VPC configuration**: This fixes the symptom but loses access to VPC resources (RDS, ElastiCache, etc.) that required VPC placement in the first place.
 
 ## Related Drill
 

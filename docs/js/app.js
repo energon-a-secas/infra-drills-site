@@ -310,7 +310,7 @@
       html += '<div class="card-grid" role="list">';
       filtered.forEach(function (drill) {
         var fileCount = drill.files ? drill.files.length : 0;
-        html += '<div class="drill-card" data-section="' + escapeHtml(drill.section) + '" data-drill="' + escapeHtml(drill.name) + '" role="listitem" tabindex="0" aria-label="' + escapeHtml(humanize(drill.name)) + ' — ' + escapeHtml(drill.difficulty) + '">';
+        html += '<div class="drill-card" data-section="' + escapeHtml(drill.section) + '" data-drill="' + escapeHtml(drill.name) + '" role="listitem" tabindex="0" aria-label="' + escapeHtml(humanize(drill.name)) + ', ' + escapeHtml(drill.difficulty) + '">';
         html += '<div class="card-header">';
         html += '<span class="card-name">' + escapeHtml(humanize(drill.name)) + '</span>';
         html += renderBadgeDifficulty(drill.difficulty);

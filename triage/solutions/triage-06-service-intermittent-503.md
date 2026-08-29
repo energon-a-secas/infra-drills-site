@@ -2,7 +2,7 @@
 
 ## Root Cause
 
-Two Deployments serve the same Service via the shared label `app: frontend-api`. One pod declares `containerPort: 80` (correct — matches nginx), the other declares `containerPort: 9090` (wrong — nginx still listens on 80).
+Two Deployments serve the same Service via the shared label `app: frontend-api`. One pod declares `containerPort: 80` (correct, matches nginx), the other declares `containerPort: 9090` (wrong, nginx still listens on 80).
 
 Both pods are Running and Ready. Without a readiness probe, Kubernetes cannot detect the port mismatch. The Service selects both pods and creates endpoints for both. When traffic hits the good pod, it returns 200. When it hits the bad pod, nothing listens on port 9090 from the Service's perspective.
 
@@ -74,7 +74,7 @@ Better long-term fix: use a single Deployment with 2 replicas instead of two sep
 
 ## Common Mistakes
 
-1. **Blaming the Service configuration** — The Service is correct (targetPort: 80). The issue is in one pod's declared containerPort.
-2. **Restarting all pods** — Both pods restart into the same configuration. The bug is in the Deployment spec.
-3. **Not checking endpoints** — Jumping to network debugging without first verifying that the Service endpoints are correct.
-4. **Assuming containerPort is just documentation** — containerPort affects endpoint registration and some CNI routing, even though it is often treated as informational.
+1. **Blaming the Service configuration**: The Service is correct (targetPort: 80). The issue is in one pod's declared containerPort.
+2. **Restarting all pods**: Both pods restart into the same configuration. The bug is in the Deployment spec.
+3. **Not checking endpoints**: Jumping to network debugging without first verifying that the Service endpoints are correct.
+4. **Assuming containerPort is just documentation**, containerPort affects endpoint registration and some CNI routing, even though it is often treated as informational.

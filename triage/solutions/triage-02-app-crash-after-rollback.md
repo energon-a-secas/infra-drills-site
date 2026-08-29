@@ -4,10 +4,10 @@
 
 Two failures caused the crash:
 
-1. **The v2.0.0 deploy used a non-existent image** — this caused the initial CrashLoopBackOff (ImagePullBackOff).
-2. **The ConfigMap `payments-config` was deleted** between the deploy and the rollback — possibly by a cleanup script, another team member, or a separate change.
+1. **The v2.0.0 deploy used a non-existent image**. This caused the initial CrashLoopBackOff (ImagePullBackOff).
+2. **The ConfigMap `payments-config` was deleted** between the deploy and the rollback, possibly by a cleanup script, another team member, or a separate change.
 
-The rollback reverted the image back to v1.0.0 (nginx:1.25), which is correct. But v1.0.0 mounts `payments-config` via `envFrom.configMapRef`. Since the ConfigMap no longer exists, the pod cannot start — Kubernetes blocks container creation when a required ConfigMap is missing.
+The rollback reverted the image back to v1.0.0 (nginx:1.25), which is correct. But v1.0.0 mounts `payments-config` via `envFrom.configMapRef`. Since the ConfigMap no longer exists, the pod cannot start, Kubernetes blocks container creation when a required ConfigMap is missing.
 
 The team assumed the rollback restored everything to the previous state. It restored the Deployment spec, but not the cluster resources the Deployment depends on.
 
@@ -32,7 +32,7 @@ Events section shows:
 Warning  Failed  configmap "payments-config" not found
 ```
 
-This is the key clue — the pod depends on a ConfigMap that does not exist.
+This is the key clue: the pod depends on a ConfigMap that does not exist.
 
 ### 3. Check the deployment spec
 
@@ -56,7 +56,7 @@ Returns `Error from server (NotFound)`. The ConfigMap was deleted.
 kubectl rollout history deployment/payments-api
 ```
 
-Shows two revisions. The rollback went to revision 1, which is the correct image — but the ConfigMap it depends on is gone.
+Shows two revisions. The rollback went to revision 1, which is the correct image, but the ConfigMap it depends on is gone.
 
 ## Solution
 
@@ -96,7 +96,7 @@ When a rollback "succeeds" but pods still fail, check what the Deployment depend
 
 ## Common Mistakes
 
-1. **Assuming the rollback is broken** — The rollback restored the Deployment spec correctly. The problem is in cluster resources the Deployment depends on, not in the spec itself.
-2. **Reapplying the entire Deployment YAML** — If you reapply the v1.0.0 manifest, you still have the same problem because the ConfigMap is missing.
-3. **Deleting and recreating the pod** — The new pod will fail for the same reason. The ConfigMap must exist first.
-4. **Not reading the pod events** — The error message explicitly says which ConfigMap is missing. Skipping `kubectl describe` means guessing when the answer is right there.
+1. **Assuming the rollback is broken**: The rollback restored the Deployment spec correctly. The problem is in cluster resources the Deployment depends on, not in the spec itself.
+2. **Reapplying the entire Deployment YAML**, If you reapply the v1.0.0 manifest, you still have the same problem because the ConfigMap is missing.
+3. **Deleting and recreating the pod**: The new pod will fail for the same reason. The ConfigMap must exist first.
+4. **Not reading the pod events**: The error message explicitly says which ConfigMap is missing. Skipping `kubectl describe` means guessing when the answer is right there.

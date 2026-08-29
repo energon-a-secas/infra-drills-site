@@ -1,7 +1,7 @@
 # gitlab-00-tutorial
 
 ## The Issue
-This is a tutorial — no issue to debug. Just run `gitlab-ci-local` to see the pipeline execute.
+This is a tutorial: no issue to debug. Just run `gitlab-ci-local` to see the pipeline execute.
 
 ## Solution
 ```bash

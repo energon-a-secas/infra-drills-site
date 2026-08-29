@@ -2,7 +2,7 @@
 
 You receive a support ticket describing a failure. Read it, form a hypothesis, run diagnostic commands, find the root cause.
 
-These drills train a different skill than break-fix labs. Instead of a known broken config file, you start with vague or misleading symptoms — the way real incidents arrive.
+These drills train a different skill than break-fix labs. Instead of a known broken config file, you start with vague or misleading symptoms. The way real incidents arrive.
 
 Drills 10 through 13 each rehearse one strategy from the [Troubleshooting Framework](https://infradrills.neorgon.com/troubleshooting/): **comparison** (diff two environments), **rule out** (isolate a shared change), **verify assumptions** (test what you "know"), and **bisect** (halve the search space). The ticket is written so the wrong strategy leads you in circles and the right one solves it quickly.
 
@@ -10,17 +10,17 @@ Drills 10 through 13 each rehearse one strategy from the [Troubleshooting Framew
 
 Each drill presents:
 
-1. **The Ticket** — what the user reported. May include red herrings or missing context.
-2. **Your Environment** — a lab-initialization script sets up the broken state.
-3. **Diagnostic Checklist** — suggested commands to investigate (hidden by default in the solution).
-4. **Root Cause + Fix** — what actually went wrong and how to resolve it.
+1. **The Ticket**: what the user reported. May include red herrings or missing context.
+2. **Your Environment**: a lab-initialization script sets up the broken state.
+3. **Diagnostic Checklist**: suggested commands to investigate (hidden by default in the solution).
+4. **Root Cause + Fix**: what actually went wrong and how to resolve it.
 
 ## Approach
 
 When you read a ticket, ask yourself:
 
 - **What exactly is the symptom?** (502 error, pod crashing, pipeline failing)
-- **What changed recently?** (deploy, config update, dependency bump — or "nothing")
+- **What changed recently?** (deploy, config update, dependency bump, or "nothing")
 - **What would I check first?** (logs, events, recent changes, resource status)
 - **What's the simplest explanation?** (typo, misconfiguration, wrong environment)
 

@@ -23,7 +23,7 @@ make quiz-gitlab       # 10 random GitLab CI/CD questions
 ## Question Types
 
 ### Diagnose
-Multiple choice — read a command/error and pick the root cause or fix.
+Multiple choice: read a command/error and pick the root cause or fix.
 
 ```
 [DIAGNOSE] (s3-b-01)
@@ -42,7 +42,7 @@ Correct!
 ```
 
 ### Complete
-Fill in the blank — type the missing command or value.
+Fill in the blank: type the missing command or value.
 
 ```
 [COMPLETE] (s3-b-02)

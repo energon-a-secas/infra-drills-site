@@ -2,13 +2,13 @@
 
 **From:** Frontend Developer
 **Priority:** Medium
-**Subject:** CI pipeline broke overnight — we didn't change anything
+**Subject:** CI pipeline broke overnight. We didn't change anything
 
 > Our pipeline was green yesterday at 5 PM. This morning every build fails
 > in the install stage with "npm ERR! engine Unsupported engine". Nobody
 > pushed any commits overnight.
 >
-> We tried re-running the pipeline twice — same error both times.
+> We tried re-running the pipeline twice: same error both times.
 >
 > Pipeline: .gitlab-ci.yml in this directory
 > Error stage: install
@@ -28,7 +28,7 @@
 
 ## Lab Setup
 
-No infrastructure needed — run directly with gitlab-ci-local.
+No infrastructure needed: run directly with gitlab-ci-local.
 
 ```bash
 cd triage-03-pipeline-broke-overnight

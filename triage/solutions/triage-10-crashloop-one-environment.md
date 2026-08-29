@@ -20,7 +20,7 @@ kubectl get pods -n staging -l app=checkout
 kubectl get pods -n production -l app=checkout
 ```
 
-`staging` is `Running`; `production` is `CrashLoopBackOff` with a climbing restart count. One environment works, one doesn't — a strong signal to *diff the environments* rather than debug the app.
+`staging` is `Running`; `production` is `CrashLoopBackOff` with a climbing restart count. One environment works, one doesn't. A strong signal to *diff the environments* rather than debug the app.
 
 ### 2. Read why the container is exiting
 

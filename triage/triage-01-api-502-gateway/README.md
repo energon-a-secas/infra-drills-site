@@ -6,7 +6,7 @@
 
 > Our /status endpoint started returning 502 Bad Gateway around 9 AM.
 > We haven't deployed anything new. The Lambda function was working fine
-> yesterday. Customers are affected — please investigate ASAP.
+> yesterday. Customers are affected: please investigate ASAP.
 >
 > API URL: https://api.example.com/status
 > Lambda: status-checker

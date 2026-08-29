@@ -4,7 +4,7 @@
 
 Kubernetes DNS resolves short hostnames within the **same namespace**. When the app was in the "default" namespace and the database was also accessible there (or the default search domain matched), `postgres` resolved correctly.
 
-After the app moved to the "payments" namespace, the DNS search path in `/etc/resolv.conf` changed. Now `postgres` resolves as `postgres.payments.svc.cluster.local` — which does not exist. The database Service lives in the "database" namespace.
+After the app moved to the "payments" namespace, the DNS search path in `/etc/resolv.conf` changed. Now `postgres` resolves as `postgres.payments.svc.cluster.local`, which does not exist. The database Service lives in the "database" namespace.
 
 The fix: use the fully qualified domain name (FQDN): `postgres.database.svc.cluster.local`.
 
@@ -40,7 +40,7 @@ Shows `postgres` in the `database` namespace.
 kubectl get deployment payments-app -n payments -o jsonpath='{.spec.template.spec.containers[0].env[0].value}'
 ```
 
-Shows `postgres://app:secret@postgres:5432/payments` — short hostname.
+Shows `postgres://app:secret@postgres:5432/payments`: short hostname.
 
 ## Solution
 
@@ -62,10 +62,10 @@ search payments.svc.cluster.local svc.cluster.local cluster.local
 ```
 
 When you look up `postgres`, the resolver tries:
-1. `postgres.payments.svc.cluster.local` — not found (no postgres Service in payments)
-2. `postgres.svc.cluster.local` — not found
-3. `postgres.cluster.local` — not found
-4. `postgres` — not found
+1. `postgres.payments.svc.cluster.local`: not found (no postgres Service in payments)
+2. `postgres.svc.cluster.local`: not found
+3. `postgres.cluster.local`: not found
+4. `postgres`: not found
 
 None match because the Service is `postgres.database.svc.cluster.local`.
 
@@ -73,7 +73,7 @@ None match because the Service is `postgres.database.svc.cluster.local`.
 |----------|--------------|-----|
 | `postgres` | Same namespace only | Expands to `postgres.<current-ns>.svc.cluster.local` |
 | `postgres.database` | Any namespace | Expands to `postgres.database.svc.cluster.local` |
-| `postgres.database.svc.cluster.local` | Any namespace | Fully qualified — no search path needed |
+| `postgres.database.svc.cluster.local` | Any namespace | Fully qualified: no search path needed |
 
 ## Triage Lessons
 
@@ -83,7 +83,7 @@ None match because the Service is `postgres.database.svc.cluster.local`.
 
 ## Common Mistakes
 
-1. **Testing DNS from the wrong namespace** — Running nslookup from the database namespace proves nothing about what the app sees.
-2. **Creating a duplicate Service** — Adding a `postgres` Service in the payments namespace that forwards to the database namespace works but adds complexity. Use FQDNs instead.
-3. **Blaming NetworkPolicies** — The problem is DNS resolution, not TCP connectivity. Check NetworkPolicies only if DNS resolves but connections time out.
-4. **Using ExternalName Services as a workaround** — While `ExternalName` can alias cross-namespace services, it's unnecessary complexity. FQDNs are simpler and more explicit.
+1. **Testing DNS from the wrong namespace**, Running nslookup from the database namespace proves nothing about what the app sees.
+2. **Creating a duplicate Service**: Adding a `postgres` Service in the payments namespace that forwards to the database namespace works but adds complexity. Use FQDNs instead.
+3. **Blaming NetworkPolicies**: The problem is DNS resolution, not TCP connectivity. Check NetworkPolicies only if DNS resolves but connections time out.
+4. **Using ExternalName Services as a workaround**, While `ExternalName` can alias cross-namespace services, it's unnecessary complexity. FQDNs are simpler and more explicit.

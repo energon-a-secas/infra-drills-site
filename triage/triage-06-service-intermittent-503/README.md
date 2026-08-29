@@ -2,7 +2,7 @@
 
 **From:** QA Engineer
 **Priority:** Medium
-**Subject:** Service returns 503 randomly — works sometimes, fails sometimes
+**Subject:** Service returns 503 randomly, works sometimes, fails sometimes
 
 > Our frontend-api service is flaky. About half the requests return 200
 > and the other half return 503 Service Unavailable. Refreshing the page
@@ -19,7 +19,7 @@
 - The service has 2 replicas.
 - Scaling from 1 to 2 replicas triggered the issue.
 - Both pods appear to be Running.
-- Approximately 50% of requests fail — consistent with round-robin load balancing across 2 pods.
+- Approximately 50% of requests fail: consistent with round-robin load balancing across 2 pods.
 
 ### Your Task
 

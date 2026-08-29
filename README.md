@@ -27,7 +27,7 @@ Real-world AWS, Kubernetes, and GitLab CI/CD break-fix challenges that run entir
 
 Hands-on troubleshooting simulations for AWS, Kubernetes, and GitLab CI/CD.
 
-No cloud costs — everything runs locally with LocalStack, Minikube, and gitlab-ci-local.
+No cloud costs: everything runs locally with LocalStack, Minikube, and gitlab-ci-local.
 
 Three goals:
 
@@ -49,7 +49,7 @@ Except to use Docker!
     - The folders follow the pattern `SERVICE-NUMBER-SHORT-TITLE`.
     - Solutions are in README format based on the name of the challenges (folders).
 - [Kubernetes Drills](./kubernetes/README.md): using Minikube.
-    - `k8s-` prefix: Generic Kubernetes (works on any cluster — minikube, kind, etc.)
+    - `k8s-` prefix: Generic Kubernetes (works on any cluster: minikube, kind, etc.)
     - `eks-` prefix: AWS EKS-specific (ALB ingress, IRSA, Secrets Manager CSI, etc.)
 - [GitLab CI/CD Drills](./gitlab/README.md): using [gitlab-ci-local](https://github.com/firecow/gitlab-ci-local).
     - Pipelines run locally without a GitLab instance.
@@ -102,7 +102,7 @@ This approach is a close second.
     - You shouldn't have to wait for something to break to realize that you have knowledge gaps. Stop it, get some help.
 
 - 3️⃣ Interview Challenges:
-    - Sometimes, you haven't had the chance to work with a particular technology, but you have the skills to get up to speed—this is for you.
+    - Sometimes, you haven't had the chance to work with a particular technology, but you have the skills to get up to speed-this is for you.
 
 <br>
 

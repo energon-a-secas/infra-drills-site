@@ -2,7 +2,7 @@
 
 ## Root Cause
 
-The security team added a bucket policy with an explicit **Deny** on `s3:PutObject` when the request lacks the `s3:x-amz-server-side-encryption: AES256` header. This is a valid compliance pattern — it forces all uploads to use server-side encryption.
+The security team added a bucket policy with an explicit **Deny** on `s3:PutObject` when the request lacks the `s3:x-amz-server-side-encryption: AES256` header. This is a valid compliance pattern. It forces all uploads to use server-side encryption.
 
 The IAM user has `s3:PutObject` permission, but explicit Deny in a bucket policy always overrides Allow in IAM policies. Every upload without the `--server-side-encryption AES256` flag hits the Deny rule and returns Access Denied.
 
@@ -52,21 +52,21 @@ For applications, set the `x-amz-server-side-encryption: AES256` header on every
 
 AWS evaluates policies in this order:
 
-1. **Explicit Deny** — if any policy says Deny, the request is denied. Full stop.
-2. **Explicit Allow** — if no Deny exists and any policy says Allow, the request is allowed.
-3. **Implicit Deny** — if nothing says Allow, the request is denied by default.
+1. **Explicit Deny**: if any policy says Deny, the request is denied. Full stop.
+2. **Explicit Allow**: if no Deny exists and any policy says Allow, the request is allowed.
+3. **Implicit Deny**: if nothing says Allow, the request is denied by default.
 
 The IAM user has Allow for `s3:PutObject`. But the bucket policy has Deny for PutObject without encryption. Deny wins over Allow regardless of where the Allow comes from.
 
 ## Triage Lessons
 
 - **"Minor tightening" can break everything.** A bucket policy with Deny overrides all IAM permissions. The security team's change was correct but its impact was not communicated.
-- **Check bucket policies early.** When S3 returns Access Denied, check both IAM and bucket policies — IAM alone misses Deny conditions.
+- **Check bucket policies early.** When S3 returns Access Denied, check both IAM and bucket policies, IAM alone misses Deny conditions.
 - **Read the Deny conditions carefully.** `StringNotEquals` means "deny when the header is NOT present or NOT equal to AES256". This denies both missing headers and wrong encryption types.
 
 ## Common Mistakes
 
-1. **Blaming IAM permissions** — The IAM user has the right permissions. The bucket policy overrides them.
-2. **Removing the bucket policy** — The policy enforces a compliance requirement. Removing it fixes uploads but creates a security gap.
-3. **Adding more IAM permissions** — Explicit Deny always overrides Allow, regardless of source.
-4. **Not reading the Condition block** — The Deny is conditional. Understanding the condition reveals exactly what the upload command needs.
+1. **Blaming IAM permissions**: The IAM user has the right permissions. The bucket policy overrides them.
+2. **Removing the bucket policy**: The policy enforces a compliance requirement. Removing it fixes uploads but creates a security gap.
+3. **Adding more IAM permissions**: Explicit Deny always overrides Allow, regardless of source.
+4. **Not reading the Condition block**: The Deny is conditional. Understanding the condition reveals exactly what the upload command needs.

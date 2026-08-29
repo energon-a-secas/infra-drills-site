@@ -47,7 +47,7 @@ gitlab-ci-local --job lint
 
 The setup script should not require a tool the image does not have. The `aws --version` call was copied in without checking the runner image. Remove the unmet dependency (or install it, or guard it):
 
-Preferred — drop the line that does not belong in shared setup:
+Preferred: drop the line that does not belong in shared setup:
 
 ```sh
 # scripts/ci-setup.sh

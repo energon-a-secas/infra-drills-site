@@ -32,9 +32,9 @@ The cache key determines which cache bucket a job reads from and writes to. Jobs
 
 | Variable | Value | Use Case |
 |---|---|---|
-| `$CI_COMMIT_SHA` | Full commit hash (`a1b2c3d4...`) | Almost never appropriate for cache — each commit produces a unique key, so the cache is never reused |
-| `$CI_COMMIT_REF_SLUG` | Branch/tag name, URL-safe (`main`, `feature-login`) | Best for dependency caches — all jobs on the same branch share the cache |
-| `$CI_PIPELINE_ID` | Unique pipeline ID | Similar problem to SHA — each pipeline gets its own cache |
+| `$CI_COMMIT_SHA` | Full commit hash (`a1b2c3d4...`) | Almost never appropriate for cache. Each commit produces a unique key, so the cache is never reused |
+| `$CI_COMMIT_REF_SLUG` | Branch/tag name, URL-safe (`main`, `feature-login`) | Best for dependency caches, all jobs on the same branch share the cache |
+| `$CI_PIPELINE_ID` | Unique pipeline ID | Similar problem to SHA: each pipeline gets its own cache |
 | `$CI_JOB_NAME` | Job name | Useful when different jobs need isolated caches |
 
 ### Cache vs Artifacts
@@ -63,11 +63,11 @@ gitlab-ci-local
 
 ## Common Mistakes
 
-1. **Using `$CI_COMMIT_SHA` as cache key** — Each commit has a unique SHA, so the cache is never reused across commits. This is the bug in this drill.
-2. **Using `$CI_PIPELINE_ID` as cache key** — Same problem; each pipeline run gets a new ID.
-3. **Confusing cache with artifacts** — Cache is best-effort and may not persist. If you need guaranteed file passing, use `artifacts`.
-4. **Forgetting `paths:` in the cache definition** — Without specifying which paths to cache, nothing gets stored.
-5. **Caching too much** — Caching large directories unnecessarily slows down cache upload/download. Only cache what is needed (e.g., `node_modules/` but not the entire project).
+1. **Using `$CI_COMMIT_SHA` as cache key**: Each commit has a unique SHA, so the cache is never reused across commits. This is the bug in this drill.
+2. **Using `$CI_PIPELINE_ID` as cache key**: Same problem; each pipeline run gets a new ID.
+3. **Confusing cache with artifacts**: Cache is best-effort and may not persist. If you need guaranteed file passing, use `artifacts`.
+4. **Forgetting `paths:` in the cache definition**, Without specifying which paths to cache, nothing gets stored.
+5. **Caching too much**: Caching large directories unnecessarily slows down cache upload/download. Only cache what is needed (e.g., `node_modules/` but not the entire project).
 
 ## Additional Resources
 

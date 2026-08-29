@@ -2,7 +2,7 @@
 
 **From:** Platform Engineer
 **Priority:** High
-**Subject:** Entire pipeline is red — every single job fails now
+**Subject:** Entire pipeline is red. Every single job fails now
 
 > Every job in our pipeline started failing at the same time: lint, test,
 > and build all fail immediately. Nobody touched those jobs. The only thing
@@ -20,7 +20,7 @@
 ### What You Know
 
 - lint, test, and build all fail at the same time.
-- The jobs themselves were not edited — a shared setup block was introduced.
+- The jobs themselves were not edited: a shared setup block was introduced.
 - When many unrelated things break together, look for the one thing they share.
 - Each job fails in setup, before its real work ever runs.
 

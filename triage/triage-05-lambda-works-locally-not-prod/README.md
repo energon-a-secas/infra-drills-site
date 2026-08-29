@@ -19,13 +19,13 @@
 - The function makes an outbound HTTPS call to api.github.com.
 - It works outside a VPC (direct invoke in LocalStack).
 - It times out when placed inside a VPC with only a private subnet.
-- The timeout was already increased — it's not a timeout config issue.
+- The timeout was already increased: it's not a timeout config issue.
 
 ### Your Task
 
 1. Understand why a VPC Lambda cannot reach the internet.
 2. Identify what network component is missing.
-3. Explain the fix (conceptual — full NAT Gateway setup is in the related drill).
+3. Explain the fix (conceptual: full NAT Gateway setup is in the related drill).
 
 ## Lab Setup
 

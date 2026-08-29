@@ -2,7 +2,7 @@
 
 ## The Issue
 
-The `build-app` job creates `dist/app.jar` successfully, but it never defines an `artifacts:` block. Without artifacts, the file only exists for the duration of the build job. When the `deploy-app` job starts, it gets a fresh workspace containing only the repository contents — `dist/app.jar` is gone.
+The `build-app` job creates `dist/app.jar` successfully, but it never defines an `artifacts:` block. Without artifacts, the file only exists for the duration of the build job. When the `deploy-app` job starts, it gets a fresh workspace containing only the repository contents, `dist/app.jar` is gone.
 
 In GitLab CI, each job runs in an isolated environment. Files created during a job are discarded when the job finishes unless they are explicitly preserved using the `artifacts:` keyword.
 
@@ -113,13 +113,13 @@ Verify that:
 
 ## Common Mistakes
 
-1. **Forgetting the `artifacts:` block entirely** — This is the bug in this drill. Without it, files are discarded after the job ends.
-2. **Confusing artifacts with cache** — Cache is best-effort and meant for dependencies. Build outputs that the next stage depends on must use `artifacts`.
-3. **Using cache for build outputs** — Cache is not guaranteed to be available. If your deploy stage depends on a compiled binary, it must be an artifact, not a cached file.
-4. **Wrong artifact paths** — The path in `artifacts:paths` must match the actual location of the files. A typo like `build/` instead of `dist/` means nothing gets uploaded.
-5. **Artifacts too large** — Large artifacts slow down upload and download. Use `.gitignore`-style patterns or `artifacts:exclude` to avoid uploading unnecessary files (e.g., intermediate build objects).
-6. **Forgetting `expire_in`** — Without it, artifacts use the instance default (30 days on GitLab.com). For CI-only artifacts that aren't needed long-term, set a short expiration to save storage.
-7. **Using `dependencies: []` accidentally** — An empty dependencies list means the job downloads no artifacts at all, which can cause the same "file not found" error.
+1. **Forgetting the `artifacts:` block entirely**: This is the bug in this drill. Without it, files are discarded after the job ends.
+2. **Confusing artifacts with cache**: Cache is best-effort and meant for dependencies. Build outputs that the next stage depends on must use `artifacts`.
+3. **Using cache for build outputs**: Cache is not guaranteed to be available. If your deploy stage depends on a compiled binary, it must be an artifact, not a cached file.
+4. **Wrong artifact paths**: The path in `artifacts:paths` must match the actual location of the files. A typo like `build/` instead of `dist/` means nothing gets uploaded.
+5. **Artifacts too large**: Large artifacts slow down upload and download. Use `.gitignore`-style patterns or `artifacts:exclude` to avoid uploading unnecessary files (e.g., intermediate build objects).
+6. **Forgetting `expire_in`**: Without it, artifacts use the instance default (30 days on GitLab.com). For CI-only artifacts that aren't needed long-term, set a short expiration to save storage.
+7. **Using `dependencies: []` accidentally**: An empty dependencies list means the job downloads no artifacts at all, which can cause the same "file not found" error.
 
 ## Additional Resources
 

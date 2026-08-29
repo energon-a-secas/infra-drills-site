@@ -4,7 +4,7 @@
 
 The Lambda handler is set to `index.main`, but the function defines `handler`. The function deploys without error, but the runtime fails on every invocation because it cannot find the entry point `main`.
 
-The "nothing changed" claim is false — someone updated the function configuration (likely during a deploy or a manual fix) and introduced a typo in the handler name.
+The "nothing changed" claim is false: someone updated the function configuration (likely during a deploy or a manual fix) and introduced a typo in the handler name.
 
 ## Diagnostic Path
 
@@ -69,10 +69,10 @@ Should return:
 
 A 502 Bad Gateway from API Gateway + Lambda usually means:
 
-1. **Lambda failed to execute** — handler error, import error, or runtime crash
-2. **Lambda timed out** — execution exceeded the configured timeout
-3. **Lambda returned an invalid response** — missing statusCode, wrong format for proxy integration
-4. **Permission issue** — API Gateway cannot invoke the Lambda function
+1. **Lambda failed to execute**: handler error, import error, or runtime crash
+2. **Lambda timed out**: execution exceeded the configured timeout
+3. **Lambda returned an invalid response**, missing statusCode, wrong format for proxy integration
+4. **Permission issue**: API Gateway cannot invoke the Lambda function
 
 The first diagnostic step is always: invoke the function directly, bypassing API Gateway. If direct invocation fails, the problem is in the function. If direct invocation works but the API still returns 502, the problem is in the API Gateway integration.
 
@@ -80,11 +80,11 @@ The first diagnostic step is always: invoke the function directly, bypassing API
 
 - **"Nothing changed" is almost never true.** Someone deployed, updated a config, or a dependency shifted. Always verify by checking recent changes, deployment history, or CloudTrail events.
 - **Start by reproducing the failure.** Before theorizing, invoke the function directly and read the actual error.
-- **Check the function configuration, not just the code.** Handler name, runtime version, timeout, memory, environment variables — any of these can break a working function without touching the code.
+- **Check the function configuration, not just the code.** Handler name, runtime version, timeout, memory, environment variables. Any of these can break a working function without touching the code.
 
 ## Common Mistakes
 
-1. **Assuming the code is wrong** — The code is fine. The configuration points to the wrong entry point.
-2. **Redeploying the same code** — If the handler name is wrong in the deployment config, redeploying just recreates the same problem.
-3. **Only checking API Gateway** — The 502 originates from the Lambda failure, not from API Gateway misconfiguration.
-4. **Not reading the invocation error** — The error message explicitly says which handler is missing.
+1. **Assuming the code is wrong**: The code is fine. The configuration points to the wrong entry point.
+2. **Redeploying the same code**: If the handler name is wrong in the deployment config, redeploying just recreates the same problem.
+3. **Only checking API Gateway**: The 502 originates from the Lambda failure, not from API Gateway misconfiguration.
+4. **Not reading the invocation error**: The error message explicitly says which handler is missing.

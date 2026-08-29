@@ -363,7 +363,7 @@
         No cloud costs · Runs 100% locally
       </div>
       <h2>Break things.<br><span>Fix them.</span> Learn.</h2>
-      <p>Near-real-world troubleshooting challenges for AWS, Kubernetes, and GitLab CI/CD — using LocalStack, Minikube, and gitlab-ci-local.</p>
+      <p>Near-real-world troubleshooting challenges for AWS, Kubernetes, and GitLab CI/CD, using LocalStack, Minikube, and gitlab-ci-local.</p>
 
       <div class="hero-actions">
         <a class="btn-primary-cta" href="/explore/">
@@ -403,7 +403,7 @@
       <a class="drill-card" href="/explore/">
         <div class="drill-card-icon" aria-hidden="true">☁️</div>
         <h3>AWS / LocalStack</h3>
-        <p>S3, Lambda, IAM, SQS, VPC, DynamoDB, Route 53, CloudFormation — simulated with LocalStack Pro.</p>
+        <p>S3, Lambda, IAM, SQS, VPC, DynamoDB, Route 53, CloudFormation, simulated with LocalStack Pro.</p>
         <div class="drill-card-meta">
           <span class="drill-count count-aws">11 drills</span>
           <span class="drill-card-link">Explore →</span>
@@ -413,7 +413,7 @@
       <a class="drill-card" href="/explore/">
         <div class="drill-card-icon" aria-hidden="true">⎈</div>
         <h3>Kubernetes / Minikube</h3>
-        <p>Deployments, services, ingress, RBAC, network policies, EKS patterns — runs on Minikube locally.</p>
+        <p>Deployments, services, ingress, RBAC, network policies, EKS patterns, runs on Minikube locally.</p>
         <div class="drill-card-meta">
           <span class="drill-count count-k8s">14 drills</span>
           <span class="drill-card-link">Explore →</span>
@@ -423,7 +423,7 @@
       <a class="drill-card" href="/explore/">
         <div class="drill-card-icon" aria-hidden="true">🦊</div>
         <h3>GitLab CI/CD</h3>
-        <p>Pipeline debugging, caching, artifacts, rules, and DAST — executed with gitlab-ci-local, no GitLab instance required.</p>
+        <p>Pipeline debugging, caching, artifacts, rules, and DAST, executed with gitlab-ci-local, no GitLab instance required.</p>
         <div class="drill-card-meta">
           <span class="drill-count count-gitlab">6 drills</span>
           <span class="drill-card-link">Explore →</span>
@@ -443,14 +443,14 @@ cd local-drills
 <span class="cmd-comment"># Check requirements (Docker, AWS CLI, jq, curl)</span>
 make check-requirements
 
-<span class="cmd-comment"># AWS drills — start LocalStack</span>
+<span class="cmd-comment"># AWS drills: start LocalStack</span>
 <span class="cmd-keyword">export</span> LOCALSTACK_AUTH_TOKEN=&lt;your-token&gt;
 cd aws &amp;&amp; make run
 
-<span class="cmd-comment"># Kubernetes drills — start Minikube</span>
+<span class="cmd-comment"># Kubernetes drills, start Minikube</span>
 cd kubernetes &amp;&amp; make start
 
-<span class="cmd-comment"># GitLab CI drills — start gitlab-ci-local</span>
+<span class="cmd-comment"># GitLab CI drills, start gitlab-ci-local</span>
 cd gitlab &amp;&amp; make start</pre>
     </div>
 

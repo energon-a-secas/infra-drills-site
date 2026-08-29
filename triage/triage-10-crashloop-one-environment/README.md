@@ -6,7 +6,7 @@
 
 > We promoted our `checkout` service from staging to production this
 > morning. It has been running fine in staging for two weeks. In production
-> the pod never comes up — it just cycles through CrashLoopBackOff.
+> the pod never comes up: it just cycles through CrashLoopBackOff.
 >
 > We deployed the exact same image and the exact same YAML. Nothing is
 > different between the two environments. I even copied the manifests from

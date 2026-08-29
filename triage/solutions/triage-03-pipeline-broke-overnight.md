@@ -83,11 +83,11 @@ The first option (pinning the image) is safer because it keeps the runtime predi
 
 When pipelines break without code changes, check the environment:
 
-1. **Docker image tags moved** — `latest`, `lts`, `stable` resolve to new versions overnight
-2. **Dependencies updated** — unpinned packages (`^1.0.0`) pulled a breaking minor/patch release
-3. **Runner infrastructure changed** — shared runners updated their base image or Docker version
-4. **Certificates or tokens expired** — TLS certs, API keys, or CI variables have expiration dates
-5. **External services changed** — an API endpoint the build depends on changed its response format
+1. **Docker image tags moved**: `latest`, `lts`, `stable` resolve to new versions overnight
+2. **Dependencies updated**: unpinned packages (`^1.0.0`) pulled a breaking minor/patch release
+3. **Runner infrastructure changed**: shared runners updated their base image or Docker version
+4. **Certificates or tokens expired**: TLS certs, API keys, or CI variables have expiration dates
+5. **External services changed**: an API endpoint the build depends on changed its response format
 
 ## Triage Lessons
 
@@ -97,7 +97,7 @@ When pipelines break without code changes, check the environment:
 
 ## Common Mistakes
 
-1. **Rerunning the pipeline** — If the image tag still points to the new version, rerunning produces the same failure. This is why the team tried twice and got the same error.
-2. **Removing the `engines` field** — This masks the problem. The app may have real incompatibilities with the newer Node version. The engine constraint exists for a reason.
-3. **Pinning to an exact patch version** — `node:20.11.1` is too specific and misses security patches. Pin to the major version (`node:20`) for the right balance.
-4. **Only fixing one job** — Both `install_deps` and `run_tests` use `node:latest`. Fix both, or extract the image into a default or variable.
+1. **Rerunning the pipeline**: If the image tag still points to the new version, rerunning produces the same failure. This is why the team tried twice and got the same error.
+2. **Removing the `engines` field**: This masks the problem. The app may have real incompatibilities with the newer Node version. The engine constraint exists for a reason.
+3. **Pinning to an exact patch version**: `node:20.11.1` is too specific and misses security patches. Pin to the major version (`node:20`) for the right balance.
+4. **Only fixing one job**: Both `install_deps` and `run_tests` use `node:latest`. Fix both, or extract the image into a default or variable.

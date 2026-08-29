@@ -20,7 +20,7 @@
 
 ### What You Know
 
-- The file is syntactically valid JSON — the failure is a semantic rule, not a parse error.
+- The file is syntactically valid JSON: the failure is a semantic rule, not a parse error.
 - The validator gives a single vague message with no location.
 - There are 24 entries; exactly one violates a rule.
 - Reading all 24 by hand is slow. There is a faster way to localize the fault.
@@ -47,6 +47,6 @@ node validate.js services.json
 # Should print: "OK: 24 services valid"
 ```
 
-Or run the full pipeline with `gitlab-ci-local` — the `validate` job should pass.
+Or run the full pipeline with `gitlab-ci-local`: the `validate` job should pass.
 
 ## [Solution](../solutions/triage-13-find-the-bad-entry.md)

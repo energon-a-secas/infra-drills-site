@@ -1,8 +1,8 @@
-# Triage 09: Pipeline Slow — Cache Miss Every Run
+# Triage 09: Pipeline Slow: Cache Miss Every Run
 
 ## Root Cause
 
-The "cleanup" MR changed the cache key from `$CI_COMMIT_REF_SLUG` to `$CI_PIPELINE_ID`. Every pipeline run gets a unique ID, so the cache key is different every time. The cache is written but never read by a subsequent run — it is effectively disabled.
+The "cleanup" MR changed the cache key from `$CI_COMMIT_REF_SLUG` to `$CI_PIPELINE_ID`. Every pipeline run gets a unique ID, so the cache key is different every time. The cache is written but never read by a subsequent run. It is effectively disabled.
 
 This is the same bug as [gitlab-01-cache-not-shared](../../gitlab/gitlab-01-cache-not-shared/), but presented as a regression after a "harmless" config change.
 
@@ -60,10 +60,10 @@ This means all runs on the same branch share the cache. The first run downloads 
 
 ## Common Mistakes
 
-1. **Adding more cache paths** — The cache works fine. The problem is the key, not the paths.
-2. **Switching to artifacts** — Artifacts are for passing files between stages in the same pipeline. Cache is for persisting files across pipeline runs. Different tools for different problems.
-3. **Blaming the runner** — The runner cache system is working correctly. It writes and reads by key. The key just never matches.
-4. **Setting `cache:policy: pull-push` explicitly** — This is already the default. The policy is not the issue.
+1. **Adding more cache paths**: The cache works fine. The problem is the key, not the paths.
+2. **Switching to artifacts**: Artifacts are for passing files between stages in the same pipeline. Cache is for persisting files across pipeline runs. Different tools for different problems.
+3. **Blaming the runner**: The runner cache system is working correctly. It writes and reads by key. The key just never matches.
+4. **Setting `cache:policy: pull-push` explicitly**: This is already the default. The policy is not the issue.
 
 ## Related Drill
 

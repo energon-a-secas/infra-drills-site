@@ -11,7 +11,7 @@
 > But our `charge` function still can't connect. It keeps timing out
 > against the OLD host `api.payments-v1.internal`, which we already
 > decommissioned. Since the config is definitely updated, this has to be
-> a DNS or network problem — the runner is caching the old address, or
+> a DNS or network problem: the runner is caching the old address, or
 > the firewall is blocking the new one.
 >
 > Can infra check the network path to the new endpoint?
