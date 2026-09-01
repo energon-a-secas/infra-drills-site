@@ -12,7 +12,6 @@ blob-report/
 # ── Node ──────────────────────────────────────────────────────────────────────
 node_modules/
 npm-debug.log*
-package-lock.json
 
 # ── LocalStack / Docker volume data (runtime state, not source) ──────────────
 **/volume/*
