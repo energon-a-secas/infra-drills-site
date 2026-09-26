@@ -243,10 +243,21 @@ def copy_assets():
 
 
 # The Pages workflow uploads docs/ as the artifact, so anything left at the
-# repo root is never served. These four are generated and checked at the root
-# by the fleet tooling (`make llms`, the SEO templates), so the root stays
-# canonical and the build copies them into the artifact instead of moving them.
-ROOT_SITE_FILES = ("llms.txt", "sitemap.xml", "robots.txt", "og-preview.jpg")
+# repo root is never served. These are generated and checked at the root by
+# the fleet tooling (`make llms`, the SEO templates, and the favicon set from
+# packages/neorgon-ui/sync-favicon.sh), so the root stays canonical and the
+# build copies them into the artifact instead of moving them.
+#
+# The favicon set was missing here until 2026-09-26: docs/index.html links
+# /favicon.svg, /apple-touch-icon.png and /site.webmanifest, the manifest names
+# the two web-app-manifest PNGs, and <meta name="neo-mark" content="on"> makes
+# the header kit mask /logo.svg, so all of them 404'd on the live site while
+# the only icon that loaded was a stale favicon.ico committed under docs/.
+ROOT_SITE_FILES = (
+    "llms.txt", "sitemap.xml", "robots.txt", "og-preview.jpg",
+    "favicon.svg", "favicon.ico", "apple-touch-icon.png", "site.webmanifest",
+    "web-app-manifest-192x192.png", "web-app-manifest-512x512.png", "logo.svg",
+)
 
 
 def copy_root_files():
