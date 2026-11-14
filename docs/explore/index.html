@@ -11,7 +11,7 @@
   <meta name="neo-mark" content="on">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; form-action 'self'; script-src 'self' 'unsafe-inline' https://esm.sh cdn.jsdelivr.net cdnjs.cloudflare.com https://challenges.cloudflare.com https://gc.zgo.at https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.neorgon.org; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.convex.cloud https://img.clerk.com https://cdn.neorgon.org https://i.ytimg.com https://yt3.ggpht.com https://neorgon.goatcounter.com; connect-src 'self' https://*.convex.cloud https://clerk.neorgon.com https://accounts.neorgon.com https://clerk-telemetry.com https://api.clerk.com https://challenges.cloudflare.com https://*.workers.dev https://neorgon.goatcounter.com https://cloudflareinsights.com; frame-src 'self' https://challenges.cloudflare.com https://clerk.neorgon.com https://accounts.neorgon.com https://www.youtube.com https://www.youtube-nocookie.com; worker-src 'self' blob:">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <title>Local Drills: Explore Labs</title>
+  <title>Explore labs | Infra Drills</title>
   <meta name="description" content="Browse and filter all AWS, Kubernetes, and GitLab CI/CD troubleshooting challenges. Read drill details, solutions, and take quizzes">
   <meta name="theme-color" content="#0B1224">
 
@@ -30,7 +30,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js" integrity="sha384-RbRhXcXx5VHUdUaC5R0oV+XBXA5GhkaVCUzK8xN19K3FmtWSHyGVgulK92XnhBsI" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js" integrity="sha384-FWJTgPmIGm1+zpNhubuHRC/ulS1UK7hAZ7qiUUmKD8yGfPcn5ZXYBd2qRgi6L8Tu" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js" integrity="sha384-44q2s9jxk8W5N9gAB0yn7UYLi9E2oVw8eHyaTZLkDS3WuZM/AttkAiVj6JoZuGS4" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/hcl.min.js" integrity="sha384-ZSs6LKr2GoUPDyHrN+rCQgyHL1yUyok5xMniSrgeRG7rUvA6vTmxronM1eZOfjgz" crossorigin="anonymous"></script>
 
   <!-- Marked.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.1/marked.min.js" integrity="sha384-3zf4Pen4fXU90jGg3cxmo7BF4dq8HMtF2s07c/Hhd1Fh+Encm6ApPvNm8vrMJbWu" crossorigin="anonymous"></script>
@@ -44,15 +43,15 @@
 <body>
   <header class="site-header" role="banner">
     <div class="header-inner">
-      <a href="#/" class="logo" aria-label="Local Drills home">
+      <a href="#/" class="logo" aria-label="Infra Drills home">
         <img class="logo-icon" src="../favicon-32x32.png" alt="" aria-hidden="true" width="32" height="32">
-        <span class="logo-text">Local Drills</span>
+        <span class="logo-text">Infra Drills</span>
       </a>
       <span class="header-count" id="header-count" aria-live="polite"></span>
       <nav class="header-nav" aria-label="Site navigation">
         <a href="/" class="header-link">← Overview</a>
         <a href="#/quizzes" class="header-link">Quizzes</a>
-        <a href="https://github.com/energon-a-secas/local-drills" class="header-link" target="_blank" rel="noopener noreferrer" aria-label="View on GitHub">GitHub</a>
+        <a href="https://github.com/energon-a-secas/infra-drills-site" class="header-link" target="_blank" rel="noopener noreferrer" aria-label="View on GitHub">GitHub</a>
       </nav>
     </div>
   </header>
@@ -62,8 +61,7 @@
   </main>
 
   <footer class="neo-footer" data-footer-mode="minimal">
-    <p>Practice AWS, Kubernetes & GitLab CI/CD troubleshooting locally.</p>
-    <p>Built with LocalStack, Minikube & gitlab-ci-local. No cloud costs.</p>
+    Every drill runs on your own machine: no cloud account, no cloud bill.
   </footer>
 
   <script src="../js/app.js"></script>

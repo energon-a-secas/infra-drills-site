@@ -1988,8 +1988,19 @@ main {
     padding: var(--space-sm) var(--space-md);
   }
 
+  /* The logo, the count and three links ran 27px past a 390px screen: the
+     links tighten and the nav wraps under the logo when it still does not fit. */
   .header-inner {
     gap: var(--space-sm);
+    flex-wrap: wrap;
+  }
+
+  .header-nav {
+    gap: var(--space-sm);
+  }
+
+  .header-link {
+    padding: 6px 10px;
   }
 
   .logo {
