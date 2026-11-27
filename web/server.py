@@ -14,6 +14,7 @@ from typing import Dict, List, Optional
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.templating import Jinja2Templates
 
 # Configuration
@@ -25,6 +26,12 @@ STATE_DIR.mkdir(exist_ok=True)
 app = FastAPI(title="Local Drills Web", version="0.1.0")
 
 # Mount static files
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1"])
+
+def drill_directory(name: str):
+    directory = (ROOT_DIR / name).resolve()
+    return directory if directory.is_relative_to(ROOT_DIR) and directory.is_dir() else None
+
 app.mount("/static", StaticFiles(directory=str(APP_DIR / "static")), name="static")
 
 # Templates
@@ -130,7 +137,7 @@ async def dashboard(request: Request):
             sections[drill.section] = []
         sections[drill.section].append(drill)
 
-    return templates.TemplateResponse("dashboard.html", {
+    return templates.TemplateResponse(request, "dashboard.html", {
         "request": request,
         "sections": sections,
         "stats": stats
@@ -140,19 +147,19 @@ async def dashboard(request: Request):
 @app.get("/drill/{drill_path:path}", response_class=HTMLResponse)
 async def drill_interface(request: Request, drill_path: str):
     """Individual drill interface with terminal"""
-    full_path = ROOT_DIR / drill_path
+    full_path = drill_directory(drill_path)
 
-    if not full_path.exists():
+    if full_path is None:
         return HTMLResponse("Drill not found", status_code=404)
 
     # Read README.md content
     readme_path = full_path / "README.md"
     readme_content = ""
-    if readme_path.exists():
+    if readme_path.resolve().is_relative_to(ROOT_DIR) and readme_path.is_file():
         with open(readme_path, "r") as f:
             readme_content = f.read()
 
-    return templates.TemplateResponse("drill.html", {
+    return templates.TemplateResponse(request, "drill.html", {
         "request": request,
         "drill_path": drill_path,
         "drill_name": drill_path.split("/")[-1].replace("-", " ").title(),
@@ -163,6 +170,16 @@ async def drill_interface(request: Request, drill_path: str):
 @app.websocket("/ws/terminal")
 async def terminal(websocket: WebSocket):
     """WebSocket endpoint for terminal emulation"""
+    local_hosts = {"localhost:8888", "127.0.0.1:8888"}
+    host = websocket.headers.get("host")
+    if (not websocket.client or websocket.client.host not in ("127.0.0.1", "::1")
+            or host not in local_hosts or websocket.headers.get("origin") != f"http://{host}"):
+        await websocket.close(code=1008)
+        return
+    directory = drill_directory(websocket.query_params.get("drill", ""))
+    if directory is None:
+        await websocket.close(code=1008)
+        return
     await websocket.accept()
 
     # Get drill path from query params
@@ -171,7 +188,7 @@ async def terminal(websocket: WebSocket):
 
     try:
         # Start bash session in drill directory
-        drill_dir = str(ROOT_DIR / drill_path) if drill_path else str(ROOT_DIR)
+        drill_dir = str(directory)
 
         process = await asyncio.create_subprocess_shell(
             "/bin/bash",
@@ -256,11 +273,11 @@ async def get_progress():
 @app.get("/quiz")
 async def quiz_interface(request: Request):
     """Quiz interface for knowledge checks"""
-    return templates.TemplateResponse("quiz.html", {"request": request})
+    return templates.TemplateResponse(request, "quiz.html", {"request": request})
 
 
 if __name__ == "__main__":
     import uvicorn
     print("Starting Local Drills Web Server...")
     print(f"State directory: {STATE_DIR}")
-    uvicorn.run(app, host="0.0.0.0", port=8888, log_level="info")
+    uvicorn.run(app, host="127.0.0.1", port=8888, proxy_headers=False, log_level="info")
